@@ -4,27 +4,30 @@ import * as admin from 'firebase-admin';
 // Export the admin instance directly. The initialization will be handled by a function.
 export const adminInstance = admin;
 
+let isInitialized = false;
+
 /**
  * Initializes the Firebase Admin SDK if it hasn't been already.
- * This function is designed to be called once when the server starts.
- * It uses a Base64 encoded service account for robustness.
+ * This function is designed to be idempotent (safe to call multiple times).
  */
 export function initializeFirebaseAdmin() {
-  if (admin.apps.length > 0) {
-    // Already initialized
+  if (isInitialized) {
     return;
   }
 
-  console.log('Attempting to initialize Firebase Admin SDK...');
+  // Prevent re-initialization in the same process
+  if (admin.apps.length > 0) {
+    isInitialized = true;
+    return;
+  }
+
   const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
 
   if (!serviceAccountBase64) {
-    console.error(
-      'Firebase Admin initialization failed: The FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is missing. Please add it to your .env file.'
+    console.warn(
+      'Firebase Admin SDK not initialized. The FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is missing. Server-side Firebase features will be disabled.'
     );
-    throw new Error(
-      'Firebase Admin initialization failed. The FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is missing.'
-    );
+    return;
   }
 
   try {
@@ -40,28 +43,28 @@ export function initializeFirebaseAdmin() {
     });
 
     console.log('Firebase Admin SDK initialized successfully.');
+    isInitialized = true;
   } catch (error: any) {
     console.error(
-      `Firebase Admin initialization failed with a credential parsing error: ${error.message}. Please ensure the FIREBASE_SERVICE_ACCOUNT_BASE64 value is a valid, non-corrupted Base64 string from your service account JSON file.`
+      `Firebase Admin initialization failed. Please ensure FIREBASE_SERVICE_ACCOUNT_BASE64 is a valid Base64 string from your service account JSON file. Error: ${error.message}`
     );
-    // Re-throw the error to prevent the application from running with a misconfigured Firebase Admin.
-    throw new Error(`Firebase Admin initialization failed: ${error.message}`);
+    // Do not throw here, but log the error. The app can run without admin features.
   }
 }
 
 
-// Export the initialized services as getters to ensure initialization has occurred.
+// Export the initialized services as getters.
+// This ensures that we are always getting the service from the initialized app.
 export const adminDb = () => {
-  if (admin.apps.length === 0) {
-    // This case should ideally not be hit if initialization is handled correctly on startup.
-    initializeFirebaseAdmin();
+  if (!isInitialized) {
+    throw new Error('Firebase Admin SDK has not been initialized. Cannot access Firestore.');
   }
   return admin.firestore();
 };
 
 export const adminAuth = () => {
-  if (admin.apps.length === 0) {
-    initializeFirebaseAdmin();
+  if (!isInitialized) {
+    throw new Error('Firebase Admin SDK has not been initialized. Cannot access Auth.');
   }
   return admin.auth();
 };

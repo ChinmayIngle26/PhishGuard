@@ -9,11 +9,8 @@ import { addThreat } from '@/services/threats';
 import { z } from 'zod';
 
 // Initialize Firebase Admin for this server-side environment.
-try {
-  initializeFirebaseAdmin();
-} catch (error) {
-    console.error("Failed to initialize Firebase Admin SDK in actions.ts. Features requiring admin privileges may fail.", error);
-}
+// This needs to be done once per server process.
+initializeFirebaseAdmin();
 
 
 const DANGEROUS_RISK_THRESHOLD = 75;
