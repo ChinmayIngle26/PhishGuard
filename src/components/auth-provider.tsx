@@ -26,8 +26,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
+    setHasMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
@@ -101,7 +103,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  if (loading) {
+  // Render a skeleton loading UI only on the client-side after mounting,
+  // and while auth state is still loading.
+  if (loading && hasMounted) {
     return (
         <div className="flex flex-col min-h-screen">
             <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
