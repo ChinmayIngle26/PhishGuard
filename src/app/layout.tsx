@@ -4,6 +4,7 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import { AppHeader } from '@/components/app-header';
 import { AuthProvider } from '@/components/auth-provider';
+import { Analytics } from "@vercel/analytics/react";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -35,6 +36,7 @@ export default function RootLayout({
           </div>
           <Toaster />
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );
