@@ -1,13 +1,8 @@
 
-import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { analyzeUrl } from '@/ai/flows/enhance-detection-accuracy';
 import { addThreat } from '@/services/threats';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-
-// Initialize Firebase Admin for this server-side environment.
-initializeFirebaseAdmin();
-
 
 const DANGEROUS_RISK_THRESHOLD = 75;
 

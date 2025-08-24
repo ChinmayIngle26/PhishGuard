@@ -1,15 +1,9 @@
 
 'use server';
 
-import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { analyzeEmail, AnalyzeEmailOutput } from '@/ai/flows/analyze-email-flow';
 import { addReputationPoints } from '@/services/reputation';
 import { z } from 'zod';
-
-// Initialize Firebase Admin for this server-side environment.
-// This needs to be done once per server process.
-initializeFirebaseAdmin();
-
 
 //=========== EMAIL ANALYSIS ===========//
 

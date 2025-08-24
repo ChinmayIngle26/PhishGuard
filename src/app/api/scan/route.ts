@@ -1,15 +1,9 @@
 
 'use server';
 
-import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { analyzeUrl } from '@/ai/flows/enhance-detection-accuracy';
 import { addThreat } from '@/services/threats';
 import { NextRequest, NextResponse } from 'next/server';
-
-// Initialize Firebase Admin for this server-side environment.
-// This needs to be done once per server process.
-initializeFirebaseAdmin();
-
 
 const DANGEROUS_RISK_THRESHOLD = 75;
 
