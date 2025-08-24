@@ -193,13 +193,19 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 </div>
 
                 <div className="pt-4 border-t">
-                    <p className="text-sm text-center text-muted-foreground mb-3">Was this result helpful?</p>
-                    <form action={feedbackAction} ref={formRef} className="flex justify-center gap-4">
-                        {user && <input type="hidden" name="userId" value={user.uid} />}
-                        <FeedbackButton feedbackType="good" isPending={isFeedbackPending} hasBeenSelected={lastFeedback === 'good'} />
-                        <FeedbackButton feedbackType="bad" isPending={isFeedbackPending} hasBeenSelected={lastFeedback === 'bad'} />
-                    </form>
-                    <p className="text-xs text-center text-muted-foreground mt-3 max-w-sm mx-auto">Your feedback is anonymized and helps improve our detection engine for everyone.</p>
+                     <div className="flex justify-center items-center gap-4">
+                        <p className="text-sm text-muted-foreground">Was this result helpful?</p>
+                        <form action={feedbackAction} ref={formRef} className="flex items-center gap-2">
+                            {user && <input type="hidden" name="userId" value={user.uid} />}
+                            <FeedbackButton feedbackType="good" isPending={isFeedbackPending} hasBeenSelected={lastFeedback === 'good'} />
+                            <FeedbackButton feedbackType="bad" isPending={isFeedbackPending} hasBeenSelected={lastFeedback === 'bad'} />
+                        </form>
+                    </div>
+                    { lastFeedback && (
+                        <p className="text-xs text-center text-muted-foreground mt-3 animate-in fade-in-0">
+                            Thank you for your feedback!
+                        </p>
+                    )}
                 </div>
             </CardContent>
         </Card>
