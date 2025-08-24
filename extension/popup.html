@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PhishGuard</title>
+  <link rel="stylesheet" type="text/css" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="icons/icon48.png" alt="PhishGuard Logo" class="logo">
+      <h1>PhishGuard</h1>
+    </div>
+    <p class="description">Enter a URL to scan it for phishing threats.</p>
+    <div class="scanner">
+      <input type="text" id="urlInput" placeholder="https://example.com">
+      <button id="scanButton">Scan</button>
+    </div>
+    <div id="result" class="result-container"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
