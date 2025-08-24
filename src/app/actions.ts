@@ -1,11 +1,20 @@
 
 'use server';
 
+import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { analyzeUrl, AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
 import { analyzeEmail, AnalyzeEmailOutput } from '@/ai/flows/analyze-email-flow';
 import { addReputationPoints, createUserReputation, getUserReputation } from '@/services/reputation';
 import { addThreat } from '@/services/threats';
 import { z } from 'zod';
+
+// Initialize Firebase Admin for this server-side environment.
+try {
+  initializeFirebaseAdmin();
+} catch (error) {
+    console.error("Failed to initialize Firebase Admin SDK in actions.ts. Features requiring admin privileges may fail.", error);
+}
+
 
 const DANGEROUS_RISK_THRESHOLD = 75;
 

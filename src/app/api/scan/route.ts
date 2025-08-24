@@ -1,9 +1,18 @@
 
 'use server';
 
+import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { analyzeUrl } from '@/ai/flows/enhance-detection-accuracy';
 import { addThreat } from '@/services/threats';
 import { NextRequest, NextResponse } from 'next/server';
+
+// Initialize Firebase Admin for this server-side environment.
+try {
+  initializeFirebaseAdmin();
+} catch (error) {
+    console.error("Failed to initialize Firebase Admin SDK in API route. Features requiring admin privileges may fail.", error);
+}
+
 
 const DANGEROUS_RISK_THRESHOLD = 75;
 
