@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import type { AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
-import { ShieldCheck, ShieldAlert, ShieldX, ThumbsUp, ThumbsDown, Loader2, Link as LinkIcon } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ShieldX, ThumbsUp, ThumbsDown, Loader2, Link as LinkIcon, CheckCircle2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -45,7 +45,7 @@ function SubmitButton() {
   );
 }
 
-function FeedbackButton({ feedbackType, isPending }: { feedbackType: 'good' | 'bad', isPending: boolean }) {
+function FeedbackButton({ feedbackType, isPending, hasBeenSelected }: { feedbackType: 'good' | 'bad', isPending: boolean, hasBeenSelected: boolean }) {
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -69,11 +69,16 @@ function FeedbackButton({ feedbackType, isPending }: { feedbackType: 'good' | 'b
             size="sm" 
             disabled={isPending}
             onClick={handleClick}
+            className={cn({'bg-accent text-accent-foreground': hasBeenSelected})}
         >
             {isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
             ) : (
-                feedbackType === 'good' ? <ThumbsUp className="mr-2 h-4 w-4" /> : <ThumbsDown className="mr-2 h-4 w-4" />
+                hasBeenSelected ? (
+                    <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+                ) : (
+                    feedbackType === 'good' ? <ThumbsUp className="mr-2 h-4 w-4" /> : <ThumbsDown className="mr-2 h-4 w-4" />
+                )
             )}
             {feedbackType === 'good' ? 'Yes' : 'No'}
         </Button>
@@ -85,6 +90,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { user } = useAuth();
     const { toast } = useToast();
     const [feedbackState, feedbackAction, isFeedbackPending] = useActionState(submitFeedbackAction, initialFeedbackState);
+    const [lastFeedback, setLastFeedback] = useState<'good' | 'bad' | null>(null);
     const formRef = useRef<HTMLFormElement>(null);
     
     useEffect(() => {
@@ -93,6 +99,10 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 title: "Feedback Submitted",
                 description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
             });
+            // Track the last successful feedback
+            const formData = new FormData(formRef.current!);
+            const type = formData.get('feedbackType') as 'good' | 'bad';
+            setLastFeedback(type);
         }
         if (feedbackState.error) {
             toast({
@@ -169,19 +179,13 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 </div>
 
                 <div className="pt-4 border-t">
-                    {feedbackState.success ? (
-                        <p className="text-sm text-center text-muted-foreground animate-in fade-in-0">Thank you for your feedback!</p>
-                    ) : (
-                        <>
-                            <p className="text-sm text-center text-muted-foreground mb-3">Was this result helpful?</p>
-                            <form action={feedbackAction} ref={formRef} className="flex justify-center gap-4">
-                                {user && <input type="hidden" name="userId" value={user.uid} />}
-                                <FeedbackButton feedbackType="good" isPending={isFeedbackPending} />
-                                <FeedbackButton feedbackType="bad" isPending={isFeedbackPending} />
-                            </form>
-                            <p className="text-xs text-center text-muted-foreground mt-3 max-w-sm mx-auto">Your feedback is anonymized and helps improve our detection engine for everyone.</p>
-                        </>
-                    )}
+                    <p className="text-sm text-center text-muted-foreground mb-3">Was this result helpful?</p>
+                    <form action={feedbackAction} ref={formRef} className="flex justify-center gap-4">
+                        {user && <input type="hidden" name="userId" value={user.uid} />}
+                        <FeedbackButton feedbackType="good" isPending={isFeedbackPending} hasBeenSelected={lastFeedback === 'good'} />
+                        <FeedbackButton feedbackType="bad" isPending={isFeedbackPending} hasBeenSelected={lastFeedback === 'bad'} />
+                    </form>
+                    <p className="text-xs text-center text-muted-foreground mt-3 max-w-sm mx-auto">Your feedback is anonymized and helps improve our detection engine for everyone.</p>
                 </div>
             </CardContent>
         </Card>
