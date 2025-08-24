@@ -45,8 +45,7 @@ function SubmitButton() {
   );
 }
 
-function FeedbackButton({ feedbackType }: { feedbackType: 'good' | 'bad' }) {
-    const { pending } = useFormStatus();
+function FeedbackButton({ feedbackType, isPending }: { feedbackType: 'good' | 'bad', isPending: boolean }) {
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -68,10 +67,10 @@ function FeedbackButton({ feedbackType }: { feedbackType: 'good' | 'bad' }) {
             value={feedbackType} 
             variant="outline" 
             size="sm" 
-            disabled={pending}
+            disabled={isPending}
             onClick={handleClick}
         >
-            {pending ? (
+            {isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
             ) : (
                 feedbackType === 'good' ? <ThumbsUp className="mr-2 h-4 w-4" /> : <ThumbsDown className="mr-2 h-4 w-4" />
@@ -85,27 +84,26 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { riskLevel, reason, url } = result;
     const { user } = useAuth();
     const { toast } = useToast();
-    const [feedbackState, feedbackAction] = useActionState(submitFeedbackAction, initialFeedbackState);
+    const [feedbackState, feedbackAction, isFeedbackPending] = useActionState(submitFeedbackAction, initialFeedbackState);
     const formRef = useRef<HTMLFormElement>(null);
-    const [hasSubmitted, setHasSubmitted] = useState(false);
+    const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
     
     useEffect(() => {
-        if (feedbackState.success && !hasSubmitted) {
+        if (feedbackState.success && !feedbackSubmitted) {
             toast({
                 title: "Feedback Submitted",
                 description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
             });
-            setHasSubmitted(true);
+            setFeedbackSubmitted(true);
         }
-        if (feedbackState.error && !hasSubmitted) {
+        if (feedbackState.error && !feedbackSubmitted) {
             toast({
                 variant: 'destructive',
                 title: "Feedback Failed",
                 description: feedbackState.error,
             });
-            setHasSubmitted(true);
         }
-    }, [feedbackState, toast, hasSubmitted]);
+    }, [feedbackState, toast, feedbackSubmitted]);
 
     let status: 'Safe' | 'Low Risk' | 'Suspicious' | 'Dangerous';
     let colorClass: string;
@@ -173,15 +171,15 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 </div>
 
                 <div className="pt-4 border-t">
-                     {hasSubmitted ? (
+                    {feedbackSubmitted ? (
                         <p className="text-sm text-center text-muted-foreground">Thank you for your feedback!</p>
                     ) : (
                         <>
                             <p className="text-sm text-center text-muted-foreground mb-3">Was this result helpful?</p>
-                            <form action={feedbackAction} ref={formRef} className="flex justify-center gap-4" onSubmit={() => setHasSubmitted(true)}>
+                            <form action={feedbackAction} ref={formRef} className="flex justify-center gap-4">
                                 {user && <input type="hidden" name="userId" value={user.uid} />}
-                                <FeedbackButton feedbackType="good" />
-                                <FeedbackButton feedbackType="bad" />
+                                <FeedbackButton feedbackType="good" isPending={isFeedbackPending} />
+                                <FeedbackButton feedbackType="bad" isPending={isFeedbackPending} />
                             </form>
                             <p className="text-xs text-center text-muted-foreground mt-3 max-w-sm mx-auto">Your feedback is anonymized and helps improve our detection engine for everyone.</p>
                         </>
