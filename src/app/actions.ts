@@ -2,7 +2,7 @@
 'use server';
 
 import { analyzeEmail, AnalyzeEmailOutput } from '@/ai/flows/analyze-email-flow';
-import { addReputationPoints } from '@/services/reputation';
+import { addReputationPoints, getUserReputation } from '@/services/reputation';
 import { z } from 'zod';
 
 //=========== EMAIL ANALYSIS ===========//
@@ -72,5 +72,19 @@ export async function submitFeedbackAction(prevState: any, formData: FormData): 
     } catch (error) {
         console.error("Error submitting feedback:", error);
         return { success: false, error: 'Failed to submit feedback. Please try again.' };
+    }
+}
+
+//=========== USER REPUTATION ===========//
+export async function getUserReputationAction(uid: string) {
+    if (!uid) {
+        return { success: false, error: 'User ID is required.', data: null };
+    }
+    try {
+        const reputation = await getUserReputation(uid);
+        return { success: true, error: null, data: reputation };
+    } catch (error) {
+        console.error('Error in getUserReputationAction:', error);
+        return { success: false, error: 'Failed to fetch user reputation.', data: null };
     }
 }

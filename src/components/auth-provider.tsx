@@ -4,7 +4,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { onAuthStateChanged, signOut, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { getUserReputation, createUserReputation } from '@/services/reputation';
+import { createUserReputation } from '@/services/reputation';
+import { getUserReputationAction } from '@/app/actions';
 import type { UserReputation } from '@/services/reputation';
 
 interface AuthContextType {
@@ -28,10 +29,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchReputation = useCallback(async (uid: string) => {
     try {
-      const userRep = await getUserReputation(uid);
-      setReputation(userRep);
+      const result = await getUserReputationAction(uid);
+      if (result.success && result.data) {
+        setReputation(result.data);
+      } else if (result.error) {
+         console.error("Failed to fetch user reputation:", result.error);
+         setReputation(null);
+      }
     } catch (error) {
-      console.error("Failed to fetch user reputation:", error);
+      console.error("Exception fetching user reputation:", error);
       setReputation(null);
     }
   }, []);
