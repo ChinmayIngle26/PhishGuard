@@ -1,9 +1,6 @@
 
 'use server';
 
-// Force load environment variables from .env file.
-require('dotenv').config();
-
 import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { analyzeUrl, AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
 import { analyzeEmail, AnalyzeEmailOutput } from '@/ai/flows/analyze-email-flow';
