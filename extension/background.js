@@ -1,6 +1,6 @@
 
-const API_URL = 'https://YOUR_VERCEL_URL/api/scan';
-const SHIELD_PAGE_URL = 'https://YOUR_VERCEL_URL/shield';
+const API_URL = 'https://phishguard-testapp.vercel.app/api/scan';
+const SHIELD_PAGE_URL = 'https://phishguard-testapp.vercel.app/shield';
 const DANGEROUS_RISK_THRESHOLD = 75;
 
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
