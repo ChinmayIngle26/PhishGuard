@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useFormStatus } from 'react-dom';
@@ -8,10 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import type { AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
-import { ShieldCheck, ShieldAlert, ShieldX, ThumbsUp, ThumbsDown, Loader2, Link as LinkIcon } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ShieldX, ThumbsUp, ThumbsDown, Loader2, Link as LinkIcon, User } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useAuth } from './auth-provider';
 
 type ScanResultWithUrl = AnalyzeUrlOutput & { url: string };
 
@@ -39,6 +41,7 @@ function SubmitButton() {
 
 function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { isPhishing, confidence, reason, url } = result;
+    const { user, login } = useAuth();
 
     let status: 'Safe' | 'Suspicious' | 'Dangerous' | 'Probably Safe';
     let colorClass: string;
@@ -63,10 +66,10 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
     } else {
         if (confidence >= 0.75) {
             status = 'Safe';
-            colorClass = 'text-safe-default';
+            colorClass = 'text-green-600'; // Using a direct color for now
             Icon = ShieldCheck;
-            progressClass = '[&>div]:bg-safe-default';
-            badgeClass = 'border-safe-default/50 bg-safe-default/10 text-safe-default';
+            progressClass = '[&>div]:bg-green-600';
+            badgeClass = 'border-green-600/50 bg-green-600/10 text-green-600';
         } else {
             status = 'Probably Safe';
             colorClass = 'text-primary';
@@ -79,9 +82,20 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { toast } = useToast();
     
     const handleFeedback = (feedback: 'good' | 'bad') => {
+        if (!user) {
+            toast({
+                title: "Login Required",
+                description: "Please log in to provide feedback and earn rewards.",
+                action: <Button onClick={login} variant="outline" size="sm">Login</Button>
+            });
+            return;
+        }
+        
+        // Here we would call an action to submit feedback to the backend.
+        // For now, we'll just show a toast.
         toast({
             title: "Feedback Submitted",
-            description: "Thank you for helping improve PhishGuard!",
+            description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
         });
     }
 
@@ -156,7 +170,7 @@ export function UrlScanner() {
   }, [state, toast]);
 
   return (
-    <div className="w-full flex flex-col items-center gap-8">
+    <div className="w-full flex flex-col items-center gap-8 px-4">
       <Card className="w-full max-w-2xl shadow-lg">
         <CardHeader>
           <CardTitle>AI-Powered URL Scanner</CardTitle>

@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
+import { Inter } from 'next/font/google';
+import { AppHeader } from '@/components/app-header';
+import { AuthProvider } from '@/components/auth-provider';
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
   title: 'PhishGuard',
@@ -22,9 +27,14 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className='font-body antialiased'>
-        {children}
-        <Toaster />
+      <body className={`${inter.variable} font-body antialiased`}>
+        <AuthProvider>
+          <div className="flex flex-col min-h-screen">
+            <AppHeader />
+            <main className="flex-grow">{children}</main>
+          </div>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
