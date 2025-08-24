@@ -7,15 +7,18 @@ import { PhishGuardLogo } from './phishguard-logo';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Gem, LogOut, User as UserIcon } from 'lucide-react';
+import Link from 'next/link';
 
 export function AppHeader() {
-  const { user, login, logout } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <div className="mr-4 hidden md:flex">
-          <PhishGuardLogo size="sm" />
+          <Link href="/">
+            <PhishGuardLogo size="sm" />
+          </Link>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
             {user ? (
@@ -33,14 +36,14 @@ export function AppHeader() {
                     <DropdownMenuContent className="w-56" align="end" forceMount>
                         <DropdownMenuLabel className="font-normal">
                             <div className="flex flex-col space-y-1">
-                                <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                                <p className="text-sm font-medium leading-none">{user.displayName ?? 'Anonymous'}</p>
                                 <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem>
                             <Gem className="mr-2 h-4 w-4" />
-                            <span>150 Guard Points</span>
+                            <span>0 Guard Points</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={logout}>
@@ -50,7 +53,9 @@ export function AppHeader() {
                     </DropdownMenuContent>
                 </DropdownMenu>
             ) : (
-                <Button onClick={login}>Sign In</Button>
+                <Button asChild>
+                  <Link href="/login">Sign In</Link>
+                </Button>
             )}
         </div>
       </div>

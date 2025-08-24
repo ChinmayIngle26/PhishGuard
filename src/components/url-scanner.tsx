@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from './auth-provider';
+import Link from 'next/link';
 
 type ScanResultWithUrl = AnalyzeUrlOutput & { url: string };
 
@@ -41,7 +42,8 @@ function SubmitButton() {
 
 function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { isPhishing, confidence, reason, url } = result;
-    const { user, login } = useAuth();
+    const { user } = useAuth();
+    const { toast } = useToast();
 
     let status: 'Safe' | 'Suspicious' | 'Dangerous' | 'Probably Safe';
     let colorClass: string;
@@ -58,15 +60,15 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
             badgeClass = 'border-destructive/50 bg-destructive/10 text-destructive';
         } else {
             status = 'Suspicious';
-            colorClass = 'text-accent';
+            colorClass = 'text-yellow-500'; // Using direct color
             Icon = ShieldAlert;
-            progressClass = '[&>div]:bg-accent';
-            badgeClass = 'border-accent/50 bg-accent/10 text-accent';
+            progressClass = '[&>div]:bg-yellow-500';
+            badgeClass = 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500';
         }
     } else {
         if (confidence >= 0.75) {
             status = 'Safe';
-            colorClass = 'text-green-600'; // Using a direct color for now
+            colorClass = 'text-green-600';
             Icon = ShieldCheck;
             progressClass = '[&>div]:bg-green-600';
             badgeClass = 'border-green-600/50 bg-green-600/10 text-green-600';
@@ -79,14 +81,12 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
         }
     }
 
-    const { toast } = useToast();
-    
     const handleFeedback = (feedback: 'good' | 'bad') => {
         if (!user) {
             toast({
                 title: "Login Required",
                 description: "Please log in to provide feedback and earn rewards.",
-                action: <Button onClick={login} variant="outline" size="sm">Login</Button>
+                action: <Button asChild variant="outline" size="sm"><Link href="/login">Login</Link></Button>
             });
             return;
         }

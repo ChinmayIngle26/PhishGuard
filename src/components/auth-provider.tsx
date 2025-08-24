@@ -1,15 +1,17 @@
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
+import { onAuthStateChanged, signOut, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, AuthCredential } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: () => Promise<void>;
+  login: (credential: AuthCredential) => Promise<any>;
   logout: () => Promise<void>;
+  signup: (credential: AuthCredential) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,13 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const login = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Error during sign-in:", error);
-    }
+  const login = async (credential: any) => {
+    return signInWithEmailAndPassword(auth, credential.email, credential.password);
   };
+  
+  const signup = async (credential: any) => {
+    return createUserWithEmailAndPassword(auth, credential.email, credential.password);
+  }
 
   const logout = async () => {
     try {
@@ -60,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, signup }}>
       {children}
     </AuthContext.Provider>
   );
