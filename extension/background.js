@@ -1,6 +1,6 @@
 
-const API_URL = 'http://localhost:9002/api/scan';
-const SHIELD_PAGE_URL = 'http://localhost:9002/shield';
+const API_URL = 'https://YOUR_VERCEL_URL/api/scan';
+const SHIELD_PAGE_URL = 'https://YOUR_VERCEL_URL/shield';
 const DANGEROUS_RISK_THRESHOLD = 75;
 
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
