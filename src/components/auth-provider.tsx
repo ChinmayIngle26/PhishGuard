@@ -5,10 +5,14 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult, AuthCredential } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
+import { createUserReputation, getUserReputation } from '@/services/reputation';
+import type { UserReputation } from '@/services/reputation';
+
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  reputation: UserReputation | null;
   login: (credential: any) => Promise<any>;
   logout: () => Promise<void>;
   signup: (credential: any) => Promise<any>;
@@ -20,11 +24,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+      if (user) {
+        const userRep = await getUserReputation(user.uid);
+        if (userRep) {
+          setReputation(userRep);
+        } else {
+            // This can happen if the user was created before the reputation system was in place.
+            await createUserReputation(user.uid, user.email);
+            const newUserRep = await getUserReputation(user.uid);
+            setReputation(newUserRep);
+        }
+      } else {
+        setReputation(null);
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -35,7 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
   
   const signup = async (credential: any) => {
-    return createUserWithEmailAndPassword(auth, credential.email, credential.password);
+    const userCredential = await createUserWithEmailAndPassword(auth, credential.email, credential.password);
+    if (userCredential.user) {
+        await createUserReputation(userCredential.user.uid, userCredential.user.email);
+    }
+    return userCredential;
   }
 
   const loginWithGoogle = async () => {
@@ -44,12 +66,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const getGoogleRedirectResult = async () => {
-    return getRedirectResult(auth);
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+        // This is a good place to ensure a reputation profile exists for Google users.
+        await createUserReputation(result.user.uid, result.user.email);
+    }
+    return result;
   }
 
   const logout = async () => {
     try {
       await signOut(auth);
+      setReputation(null);
     } catch (error) {
       console.error("Error during sign-out:", error);
     }
@@ -73,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, signup, loginWithGoogle, getGoogleRedirectResult }}>
+    <AuthContext.Provider value={{ user, reputation, loading, login, logout, signup, loginWithGoogle, getGoogleRedirectResult }}>
       {children}
     </AuthContext.Provider>
   );

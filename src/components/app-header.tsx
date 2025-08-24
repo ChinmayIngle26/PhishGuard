@@ -10,7 +10,7 @@ import { Gem, LogOut, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 
 export function AppHeader() {
-  const { user, logout } = useAuth();
+  const { user, reputation, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -43,7 +43,7 @@ export function AppHeader() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem>
                             <Gem className="mr-2 h-4 w-4" />
-                            <span>0 Guard Points</span>
+                            <span>{reputation?.guardPoints ?? 0} Guard Points</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={logout}>

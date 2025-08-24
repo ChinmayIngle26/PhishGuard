@@ -2,14 +2,14 @@
 "use client";
 
 import { useFormStatus } from 'react-dom';
-import { useActionState, useEffect, useRef, useState } from 'react';
-import { scanUrlAction } from '@/app/actions';
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
+import { scanUrlAction, submitFeedbackAction } from '@/app/actions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import type { AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
-import { ShieldCheck, ShieldAlert, ShieldX, ThumbsUp, ThumbsDown, Loader2, Link as LinkIcon, User } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ShieldX, ThumbsUp, ThumbsDown, Loader2, Link as LinkIcon } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -44,6 +44,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { isPhishing, confidence, reason, url } = result;
     const { user } = useAuth();
     const { toast } = useToast();
+    const [isPending, startTransition] = useTransition();
 
     let status: 'Safe' | 'Suspicious' | 'Dangerous' | 'Probably Safe';
     let colorClass: string;
@@ -81,7 +82,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
         }
     }
 
-    const handleFeedback = (feedback: 'good' | 'bad') => {
+    const handleFeedback = (feedbackType: 'good' | 'bad') => {
         if (!user) {
             toast({
                 title: "Login Required",
@@ -91,11 +92,20 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
             return;
         }
         
-        // Here we would call an action to submit feedback to the backend.
-        // For now, we'll just show a toast.
-        toast({
-            title: "Feedback Submitted",
-            description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
+        startTransition(async () => {
+            const result = await submitFeedbackAction(user.uid, feedbackType);
+            if (result.success) {
+                toast({
+                    title: "Feedback Submitted",
+                    description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
+                });
+            } else {
+                 toast({
+                    variant: 'destructive',
+                    title: "Feedback Failed",
+                    description: result.error || 'An unexpected error occurred.',
+                });
+            }
         });
     }
 
@@ -134,11 +144,13 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 <div className="pt-4 border-t">
                     <p className="text-sm text-center text-muted-foreground mb-3">Was this result helpful?</p>
                     <div className="flex justify-center gap-4">
-                        <Button variant="outline" size="sm" onClick={() => handleFeedback('good')}>
-                            <ThumbsUp className="mr-2 h-4 w-4" /> Yes
+                        <Button variant="outline" size="sm" onClick={() => handleFeedback('good')} disabled={isPending}>
+                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ThumbsUp className="mr-2 h-4 w-4" /> }
+                             Yes
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleFeedback('bad')}>
-                            <ThumbsDown className="mr-2 h-4 w-4" /> No
+                        <Button variant="outline" size="sm" onClick={() => handleFeedback('bad')} disabled={isPending}>
+                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ThumbsDown className="mr-2 h-4 w-4" />}
+                             No
                         </Button>
                     </div>
                      <p className="text-xs text-center text-muted-foreground mt-3 max-w-sm mx-auto">Your feedback is anonymized and helps improve our detection engine for everyone.</p>

@@ -1,6 +1,7 @@
 'use server';
 
 import { analyzeUrl, AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
+import { addReputationPoints } from '@/services/reputation';
 import { z } from 'zod';
 
 const ScanUrlSchema = z.object({
@@ -41,4 +42,25 @@ export async function scanUrlAction(prevState: ScanState, formData: FormData): P
       error: 'An unexpected error occurred. Please try again later.',
     };
   }
+}
+
+const FeedbackSchema = z.object({
+    userId: z.string(),
+    feedbackType: z.enum(['good', 'bad']),
+});
+
+export async function submitFeedbackAction(userId: string, feedbackType: 'good' | 'bad'): Promise<{ success: boolean; error?: string }> {
+    const validation = FeedbackSchema.safeParse({ userId, feedbackType });
+    
+    if (!validation.success) {
+        return { success: false, error: 'Invalid input.' };
+    }
+
+    try {
+        await addReputationPoints(userId, feedbackType);
+        return { success: true };
+    } catch (error) {
+        console.error("Error submitting feedback:", error);
+        return { success: false, error: 'Failed to submit feedback.' };
+    }
 }
