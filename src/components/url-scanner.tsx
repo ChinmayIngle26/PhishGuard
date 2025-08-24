@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useFormStatus } from 'react-dom';
-import { useActionState, useEffect, useRef, useState } from 'react';
-import { scanUrlAction, submitFeedbackAction } from '@/app/actions';
+import { useFormStatus, useFormState } from 'react-dom';
+import { useEffect, useRef, useState } from 'react';
+import { submitFeedbackAction } from '@/app/actions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,31 +18,9 @@ import Link from 'next/link';
 
 type ScanResultWithUrl = AnalyzeUrlOutput & { url: string };
 
-const initialScanState = {
-  success: false,
-  data: null,
-  error: null,
-};
-
 const initialFeedbackState = {
     success: false,
     error: undefined,
-}
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} className="w-full sm:w-auto flex-shrink-0">
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Scanning...
-        </>
-      ) : (
-        'Scan URL'
-      )}
-    </Button>
-  );
 }
 
 function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }: { feedbackType: 'good' | 'bad', isPending: boolean, hasBeenSelected: boolean, formAction: (payload: FormData) => void }) {
@@ -57,18 +35,15 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }
                 description: "Please log in to provide feedback and earn rewards.",
                 action: <Button asChild variant="outline" size="sm"><Link href="/login">Login</Link></Button>
             });
-        } else {
-             formAction(new FormData(e.currentTarget));
         }
     }
 
     return (
-        <form onSubmit={(e) => { e.preventDefault(); handleClick(e.currentTarget); }} className="flex items-center gap-2">
+        <form action={formAction} onSubmit={(e) => { handleClick(e.currentTarget); }} className="flex items-center gap-2">
             {user && <input type="hidden" name="userId" value={user.uid} />}
+            <input type="hidden" name="feedbackType" value={feedbackType} />
             <Button 
                 type="submit" 
-                name="feedbackType" 
-                value={feedbackType} 
                 variant="outline" 
                 size="sm" 
                 disabled={isPending}
@@ -92,7 +67,7 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }
 function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { riskLevel, reason, url, impersonatedBrand, recommendation } = result;
     const { toast } = useToast();
-    const [feedbackState, feedbackAction, isFeedbackPending] = useActionState(submitFeedbackAction, initialFeedbackState);
+    const [feedbackState, feedbackAction, isFeedbackPending] = useFormState(submitFeedbackAction, initialFeedbackState);
     const [submittedFeedback, setSubmittedFeedback] = useState<'good' | 'bad' | null>(null);
     
     useEffect(() => {
@@ -102,7 +77,6 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
             });
             // This is a bit of a hack to find out which button was clicked.
-            // In a real app, you might handle this more cleanly.
             const lastAction = (feedbackState as any).lastAction;
             if (lastAction) {
                 setSubmittedFeedback(lastAction);
@@ -215,24 +189,58 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
 
 
 export function UrlScanner() {
-  const [scanState, formAction] = useActionState(scanUrlAction, initialScanState);
   const [result, setResult] = useState<ScanResultWithUrl | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   
-  useEffect(() => {
-    if (scanState.success && scanState.data) {
-        const url = formRef.current?.url.value || '';
-        setResult({ ...scanState.data, url });
-    } else if (scanState.error) {
-      toast({
-        variant: 'destructive',
-        title: 'Scan Failed',
-        description: scanState.error,
-      });
-      setResult(null);
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    setResult(null);
+
+    const formData = new FormData(event.currentTarget);
+    const url = formData.get('url') as string;
+
+    try {
+        const response = await fetch('/api/actions/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'An unexpected error occurred.');
+        }
+
+        setResult({ ...data, url });
+
+    } catch (err: any) {
+        const errorMessage = err.message || 'An unexpected error occurred. Please try again later.';
+        setError(errorMessage);
+        toast({
+            variant: 'destructive',
+            title: 'Scan Failed',
+            description: errorMessage,
+        });
+    } finally {
+        setPending(false);
     }
-  }, [scanState, toast]);
+  }
+  
+  useEffect(() => {
+    if (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Scan Failed',
+            description: error,
+        });
+    }
+  }, [error, toast]);
 
   return (
     <div className="w-full flex flex-col items-center gap-8">
@@ -242,7 +250,7 @@ export function UrlScanner() {
           <CardDescription>Enter a URL to scan for phishing threats in real-time.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form ref={formRef} action={formAction} className="space-y-4">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                     name="url"
@@ -250,8 +258,18 @@ export function UrlScanner() {
                     placeholder="https://example.com"
                     required
                     className="flex-grow text-base"
+                    disabled={pending}
                 />
-                <SubmitButton />
+                <Button type="submit" disabled={pending} className="w-full sm:w-auto flex-shrink-0">
+                  {pending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Scanning...
+                    </>
+                  ) : (
+                    'Scan URL'
+                  )}
+                </Button>
             </div>
           </form>
         </CardContent>

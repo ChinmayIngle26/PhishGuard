@@ -2,80 +2,14 @@
 'use server';
 
 import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
-import { analyzeUrl, AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
 import { analyzeEmail, AnalyzeEmailOutput } from '@/ai/flows/analyze-email-flow';
-import { addReputationPoints, createUserReputation, getUserReputation } from '@/services/reputation';
-import { addThreat } from '@/services/threats';
+import { addReputationPoints } from '@/services/reputation';
 import { z } from 'zod';
 
 // Initialize Firebase Admin for this server-side environment.
 // This needs to be done once per server process.
 initializeFirebaseAdmin();
 
-
-const DANGEROUS_RISK_THRESHOLD = 75;
-
-//=========== URL SCANNING ===========//
-
-const ScanUrlSchema = z.object({
-  url: z.string().url({ message: 'Please enter a valid URL.' }),
-});
-
-interface ScanUrlState {
-  success: boolean;
-  data: AnalyzeUrlOutput | null;
-  error: string | null;
-}
-
-export async function scanUrlAction(prevState: ScanUrlState, formData: FormData): Promise<ScanUrlState> {
-  const validatedFields = ScanUrlSchema.safeParse({
-    url: formData.get('url'),
-  });
-
-  if (!validatedFields.success) {
-    return {
-      success: false,
-      data: null,
-      error: validatedFields.error.errors.map((e) => e.message).join(', '),
-    };
-  }
-
-  const url = validatedFields.data.url;
-
-  try {
-    const result = await analyzeUrl({ url });
-
-    // If the URL is dangerous, add it to the threat feed.
-    // This is now in its own try/catch so a DB write failure doesn't
-    // prevent the user from seeing their scan result.
-    if (result.riskLevel >= DANGEROUS_RISK_THRESHOLD) {
-      try {
-        await addThreat({
-          url: url,
-          riskLevel: result.riskLevel,
-          reason: result.reason,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (threatError) {
-          console.error("Failed to add threat to database, but returning success to user.", threatError);
-          // We don't return an error here because the primary action (scanning) succeeded.
-      }
-    }
-
-    return {
-      success: true,
-      data: result,
-      error: null,
-    };
-  } catch (error) {
-    console.error('Error analyzing URL:', error);
-    return {
-      success: false,
-      data: null,
-      error: 'An unexpected error occurred. Please try again later.',
-    };
-  }
-}
 
 //=========== EMAIL ANALYSIS ===========//
 

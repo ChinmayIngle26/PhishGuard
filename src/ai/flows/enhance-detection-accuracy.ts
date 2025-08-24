@@ -1,6 +1,3 @@
-
-'use server';
-
 /**
  * @fileOverview An AI-powered phishing URL detector flow.
  *
