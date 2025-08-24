@@ -8,7 +8,10 @@ const API_URL = 'http://localhost:9002/api/scan'; // This will need to be your d
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   const currentTab = tabs[0];
   if (currentTab && currentTab.url) {
-    urlInput.value = currentTab.url;
+    // Avoid filling in chrome:// or other internal URLs
+    if (currentTab.url.startsWith('http')) {
+      urlInput.value = currentTab.url;
+    }
   }
 });
 
@@ -59,7 +62,9 @@ function displayError(message) {
     resultDiv.innerHTML = `
         <div class="result-card dangerous">
             <div class="result-header">Error</div>
-            <p class="result-reason">${message}</p>
+            <div class="result-section">
+                <p>${message}</p>
+            </div>
         </div>
     `;
 }
