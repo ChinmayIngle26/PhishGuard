@@ -46,7 +46,7 @@ function SubmitButton() {
 }
 
 function ResultCard({ result }: { result: ScanResultWithUrl }) {
-    const { isPhishing, confidence, reason, url } = result;
+    const { riskLevel, reason, url } = result;
     const { user } = useAuth();
     const { toast } = useToast();
     const [feedbackState, feedbackAction] = useActionState(submitFeedbackAction, initialFeedbackState);
@@ -86,41 +86,38 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
         feedbackAction(formData);
     }
 
-    let status: 'Safe' | 'Suspicious' | 'Dangerous' | 'Probably Safe';
+    let status: 'Safe' | 'Low Risk' | 'Suspicious' | 'Dangerous';
     let colorClass: string;
     let Icon: React.ElementType;
     let progressClass: string;
     let badgeClass: string;
 
-    if (isPhishing) {
-        if (confidence >= 0.75) {
-            status = 'Dangerous';
-            colorClass = 'text-destructive';
-            Icon = ShieldX;
-            progressClass = '[&>div]:bg-destructive';
-            badgeClass = 'border-destructive/50 bg-destructive/10 text-destructive';
-        } else {
-            status = 'Suspicious';
-            colorClass = 'text-yellow-500';
-            Icon = ShieldAlert;
-            progressClass = '[&>div]:bg-yellow-500';
-            badgeClass = 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500';
-        }
+    if (riskLevel > 75) {
+        status = 'Dangerous';
+        colorClass = 'text-destructive';
+        Icon = ShieldX;
+        progressClass = '[&>div]:bg-destructive';
+        badgeClass = 'border-destructive/50 bg-destructive/10 text-destructive';
+    } else if (riskLevel > 40) {
+        status = 'Suspicious';
+        colorClass = 'text-yellow-500';
+        Icon = ShieldAlert;
+        progressClass = '[&>div]:bg-yellow-500';
+        badgeClass = 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500';
+    } else if (riskLevel > 10) {
+        status = 'Low Risk';
+        colorClass = 'text-primary';
+        Icon = ShieldCheck;
+        progressClass = '[&>div]:bg-primary';
+        badgeClass = 'border-primary/50 bg-primary/10 text-primary';
     } else {
-        if (confidence >= 0.75) {
-            status = 'Safe';
-            colorClass = 'text-green-600';
-            Icon = ShieldCheck;
-            progressClass = '[&>div]:bg-green-600';
-            badgeClass = 'border-green-600/50 bg-green-600/10 text-green-600';
-        } else {
-            status = 'Probably Safe';
-            colorClass = 'text-primary';
-            Icon = ShieldCheck;
-            progressClass = '[&>div]:bg-primary';
-            badgeClass = 'border-primary/50 bg-primary/10 text-primary';
-        }
+        status = 'Safe';
+        colorClass = 'text-green-600';
+        Icon = ShieldCheck;
+        progressClass = '[&>div]:bg-green-600';
+        badgeClass = 'border-green-600/50 bg-green-600/10 text-green-600';
     }
+
 
     return (
         <Card className="w-full max-w-2xl animate-in fade-in-0 zoom-in-95">
@@ -141,12 +138,12 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 
                 <div>
                     <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium">Confidence Score</span>
+                        <span className="text-sm font-medium">Risk Level</span>
                         <Badge variant="outline" className={cn('font-semibold', badgeClass)}>
-                            {(confidence * 100).toFixed(0)}%
+                            {riskLevel}/100
                         </Badge>
                     </div>
-                    <Progress value={confidence * 100} className={cn('h-2', progressClass)} />
+                    <Progress value={riskLevel} className={cn('h-2', progressClass)} />
                 </div>
 
                 <div>

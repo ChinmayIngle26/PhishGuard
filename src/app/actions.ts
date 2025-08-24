@@ -64,7 +64,7 @@ export async function submitFeedbackAction(prevState: any, formData: FormData): 
         const { userId, feedbackType } = validatedFields.data;
         const userRep = await getUserReputation(userId);
         if (!userRep) {
-            return { success: false, error: 'User reputation profile not found.' };
+            await createUserReputation(userId, null);
         }
         await addReputationPoints(userId, feedbackType);
         return { success: true };
