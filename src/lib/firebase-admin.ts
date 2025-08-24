@@ -11,8 +11,8 @@ export const adminInstance = admin;
  */
 export function initializeFirebaseAdmin() {
   if (admin.apps.length > 0) {
-    console.log('Firebase Admin SDK already initialized.');
-    return; // Already initialized
+    // Already initialized
+    return;
   }
 
   console.log('Attempting to initialize Firebase Admin SDK...');
@@ -49,8 +49,6 @@ export function initializeFirebaseAdmin() {
   }
 }
 
-// Immediately attempt to initialize on module load for server environments.
-initializeFirebaseAdmin();
 
 // Export the initialized services as getters to ensure initialization has occurred.
 export const adminDb = () => {
