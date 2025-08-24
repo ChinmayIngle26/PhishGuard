@@ -18,7 +18,7 @@ export function initializeFirebaseAdmin() {
 
   if (!serviceAccountBase64) {
     throw new Error(
-      'Firebase Admin initialization failed. The FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is missing. Please add it to your .env file.'
+      'Firebase Admin initialization failed. The FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is missing. Please add it to your .env file for local development or to your Vercel/hosting provider environment variables for production.'
     );
   }
 
