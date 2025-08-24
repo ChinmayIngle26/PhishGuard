@@ -2,7 +2,7 @@
 'use server';
 
 import { adminDb } from '@/lib/firebase-admin';
-import { increment } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export interface UserReputation {
     uid: string;
@@ -39,11 +39,12 @@ export async function createUserReputation(uid: string, email: string | null): P
 
 /**
  * Adds points to a user's reputation for providing feedback using the Admin SDK.
+ * This function is now more robust, checking for the document's existence before updating.
  * @param uid - The user's unique ID.
  * @param feedbackType - The type of feedback given ('good' or 'bad').
  */
 export async function addReputationPoints(uid: string, feedbackType: 'good' | 'bad'): Promise<void> {
-    const db = adminDb(); // Get initialized Firestore instance
+    const db = adminDb();
     if (!uid) {
         throw new Error("User ID is required to add reputation points.");
     }
@@ -51,11 +52,31 @@ export async function addReputationPoints(uid: string, feedbackType: 'good' | 'b
     const userReputationRef = db.collection('reputations').doc(uid);
     const pointsToAdd = feedbackType === 'good' ? POINT_VALUES.GOOD_FEEDBACK : POINT_VALUES.BAD_FEEDBACK;
 
-    await userReputationRef.update({
-        guardPoints: increment(pointsToAdd),
-        feedbackCount: increment(1),
-    });
+    try {
+        await db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(userReputationRef);
+            if (!doc.exists) {
+                // If the document doesn't exist, create it with the initial points.
+                transaction.set(userReputationRef, {
+                    uid: uid,
+                    email: null, // We don't have the email here, but it can be updated later if needed.
+                    guardPoints: pointsToAdd,
+                    feedbackCount: 1,
+                });
+            } else {
+                // If the document exists, increment the values.
+                transaction.update(userReputationRef, {
+                    guardPoints: FieldValue.increment(pointsToAdd),
+                    feedbackCount: FieldValue.increment(1),
+                });
+            }
+        });
+    } catch (error) {
+        console.error("Transaction failure:", error);
+        throw new Error("Failed to update reputation points.");
+    }
 }
+
 
 /**
  * Fetches a user's reputation data from Firestore using the Admin SDK.
