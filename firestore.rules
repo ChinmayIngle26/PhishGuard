@@ -3,20 +3,21 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow public, read-only access to the real-time threat feed.
-    // Writes are only allowed from the server-side Admin SDK.
+
+    // Threats are public and read-only for all users.
+    // Only backend services (with admin access) should write to this collection.
     match /threats/{threatId} {
       allow read: if true;
       allow write: if false;
     }
 
-    // Allow users to read and write to their own reputation document.
-    // This is secure because they can only access the document matching their own UID.
+    // User reputation data is private.
+    // Users can only read or write their own reputation document.
     match /reputations/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // Deny all other reads and writes by default for security.
+    
+    // Deny all other access by default for security.
     match /{document=**} {
       allow read, write: if false;
     }
