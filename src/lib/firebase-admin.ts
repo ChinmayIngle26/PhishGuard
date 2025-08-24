@@ -1,58 +1,55 @@
 
 import * as admin from 'firebase-admin';
 
-function initializeFirebaseAdmin() {
+// Export the admin instance directly. The initialization will be handled by a function.
+export const adminInstance = admin;
+
+/**
+ * Initializes the Firebase Admin SDK if it hasn't been already.
+ * This function is designed to be called before any Firebase Admin services are used.
+ * It uses a Base64 encoded service account for robustness.
+ */
+export function initializeFirebaseAdmin() {
   if (admin.apps.length > 0) {
-    return;
+    return; // Already initialized
   }
 
-  // This is the new, more robust method using a Base64 encoded service account.
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
-    try {
-      const decodedServiceAccount = Buffer.from(
-        process.env.FIREBASE_SERVICE_ACCOUNT_BASE64,
-        'base64'
-      ).toString('utf-8');
-      const serviceAccount = JSON.parse(decodedServiceAccount);
+  const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
 
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-      console.log('Firebase Admin SDK initialized successfully via Base64.');
-      return;
-    } catch (error: any) {
-      throw new Error(`Firebase Admin initialization via Base64 failed: ${error.message}`);
-    }
-  }
-
-  // Fallback to the old method if the new one isn't configured.
-  // This helps with backward compatibility but the Base64 method is preferred.
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-
-  if (!projectId || !clientEmail || !privateKey) {
+  if (!serviceAccountBase64) {
     throw new Error(
-      'Firebase Admin initialization failed. Missing required environment variables. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 (recommended) or all of NEXT_PUBLIC_FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in your .env file.'
+      'Firebase Admin initialization failed. The FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is missing. Please add it to your .env file.'
     );
   }
 
   try {
+    const decodedServiceAccount = Buffer.from(
+      serviceAccountBase64,
+      'base64'
+    ).toString('utf-8');
+
+    const serviceAccount = JSON.parse(decodedServiceAccount);
+
     admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId,
-        clientEmail,
-        privateKey: privateKey.replace(/\\n/g, '\n'),
-      }),
+      credential: admin.credential.cert(serviceAccount),
     });
-    console.log('Firebase Admin SDK initialized successfully via individual variables.');
+
+    console.log('Firebase Admin SDK initialized successfully.');
   } catch (error: any) {
-    throw new Error(`Firebase Admin initialization via individual variables failed: ${error.message}`);
+    // Provide a more detailed error message to help diagnose the issue.
+    throw new Error(
+      `Firebase Admin initialization failed with a credential parsing error: ${error.message}. Please ensure the FIREBASE_SERVICE_ACCOUNT_BASE64 value is a valid, non-corrupted Base64 string from your service account JSON file.`
+    );
   }
 }
 
-// Run the initialization
-initializeFirebaseAdmin();
+// Export the initialized services as getters to ensure initialization has occurred.
+export const adminDb = () => {
+  initializeFirebaseAdmin();
+  return admin.firestore();
+};
 
-export const adminDb = admin.firestore();
-export const adminAuth = admin.auth();
+export const adminAuth = () => {
+  initializeFirebaseAdmin();
+  return admin.auth();
+};

@@ -16,7 +16,6 @@ const POINT_VALUES = {
     BAD_FEEDBACK: 1, 
 };
 
-
 /**
  * Creates a new user reputation document in Firestore using the Admin SDK.
  * This is typically called when a user signs up.
@@ -24,7 +23,8 @@ const POINT_VALUES = {
  * @param email - The user's email address.
  */
 export async function createUserReputation(uid: string, email: string | null): Promise<void> {
-    const userReputationRef = adminDb.collection('reputations').doc(uid);
+    const db = adminDb(); // Get initialized Firestore instance
+    const userReputationRef = db.collection('reputations').doc(uid);
     const userReputationSnap = await userReputationRef.get();
 
     if (!userReputationSnap.exists) {
@@ -43,11 +43,12 @@ export async function createUserReputation(uid: string, email: string | null): P
  * @param feedbackType - The type of feedback given ('good' or 'bad').
  */
 export async function addReputationPoints(uid: string, feedbackType: 'good' | 'bad'): Promise<void> {
+    const db = adminDb(); // Get initialized Firestore instance
     if (!uid) {
         throw new Error("User ID is required to add reputation points.");
     }
 
-    const userReputationRef = adminDb.collection('reputations').doc(uid);
+    const userReputationRef = db.collection('reputations').doc(uid);
     const pointsToAdd = feedbackType === 'good' ? POINT_VALUES.GOOD_FEEDBACK : POINT_VALUES.BAD_FEEDBACK;
 
     await userReputationRef.update({
@@ -62,9 +63,10 @@ export async function addReputationPoints(uid: string, feedbackType: 'good' | 'b
  * @returns The user's reputation data, or null if not found.
  */
 export async function getUserReputation(uid: string): Promise<UserReputation | null> {
+    const db = adminDb(); // Get initialized Firestore instance
     if (!uid) return null;
 
-    const userReputationRef = adminDb.collection('reputations').doc(uid);
+    const userReputationRef = db.collection('reputations').doc(uid);
     const userReputationSnap = await userReputationRef.get();
 
     if (userReputationSnap.exists) {
