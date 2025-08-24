@@ -1,6 +1,4 @@
 
-'use server';
-
 import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { analyzeUrl } from '@/ai/flows/enhance-detection-accuracy';
 import { addThreat } from '@/services/threats';
