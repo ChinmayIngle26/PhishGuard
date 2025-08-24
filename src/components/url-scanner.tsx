@@ -1,7 +1,7 @@
 
-"use client";
+'use client';
 
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { submitFeedbackAction } from '@/app/actions';
 import { Input } from '@/components/ui/input';
@@ -67,7 +67,7 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }
 function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { riskLevel, reason, url, impersonatedBrand, recommendation } = result;
     const { toast } = useToast();
-    const [feedbackState, feedbackAction, isFeedbackPending] = useFormState(submitFeedbackAction, initialFeedbackState);
+    const [feedbackState, feedbackAction, isFeedbackPending] = useActionState(submitFeedbackAction, initialFeedbackState);
     const [submittedFeedback, setSubmittedFeedback] = useState<'good' | 'bad' | null>(null);
     const formRef = useRef<HTMLFormElement>(null);
     
