@@ -170,7 +170,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
 
                 <div className="pt-4 border-t">
                     {feedbackState.success ? (
-                        <p className="text-sm text-center text-muted-foreground">Thank you for your feedback!</p>
+                        <p className="text-sm text-center text-muted-foreground animate-in fade-in-0">Thank you for your feedback!</p>
                     ) : (
                         <>
                             <p className="text-sm text-center text-muted-foreground mb-3">Was this result helpful?</p>
