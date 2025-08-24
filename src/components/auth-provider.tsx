@@ -2,16 +2,17 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, AuthCredential } from 'firebase/auth';
+import { onAuthStateChanged, signOut, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, AuthCredential } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (credential: AuthCredential) => Promise<any>;
+  login: (credential: any) => Promise<any>;
   logout: () => Promise<void>;
-  signup: (credential: AuthCredential) => Promise<any>;
+  signup: (credential: any) => Promise<any>;
+  loginWithGoogle: () => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +35,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const signup = async (credential: any) => {
     return createUserWithEmailAndPassword(auth, credential.email, credential.password);
+  }
+
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(auth, provider);
   }
 
   const logout = async () => {
@@ -62,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, signup }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, signup, loginWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );
