@@ -42,9 +42,26 @@ export default function LoginPage() {
     const [loading, setLoading] = React.useState(false);
     const [googleLoading, setGoogleLoading] = React.useState(false);
 
-    const { login, signup, loginWithGoogle } = useAuth();
+    const { login, signup, loginWithGoogle, getGoogleRedirectResult } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
+
+    React.useEffect(() => {
+        const checkRedirect = async () => {
+            try {
+                const result = await getGoogleRedirectResult();
+                if (result) {
+                    toast({ title: "Login Successful", description: "Welcome!" });
+                    router.push('/');
+                }
+            } catch (error) {
+                console.error("Google Login failed after redirect:", error);
+                const firebaseError = error as FirebaseError;
+                toast({ variant: 'destructive', title: "Google Login Failed", description: firebaseError.message });
+            }
+        };
+        checkRedirect();
+    }, [getGoogleRedirectResult, router, toast]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -82,15 +99,10 @@ export default function LoginPage() {
         setGoogleLoading(true);
         try {
             await loginWithGoogle();
-            toast({ title: "Login Successful", description: "Welcome!" });
-            router.push('/');
         } catch (error) {
             console.error("Google Login failed:", error);
             const firebaseError = error as FirebaseError;
-            if (firebaseError.code !== 'auth/popup-closed-by-user') {
-              toast({ variant: 'destructive', title: "Google Login Failed", description: firebaseError.message });
-            }
-        } finally {
+            toast({ variant: 'destructive', title: "Google Login Failed", description: firebaseError.message });
             setGoogleLoading(false);
         }
     }
@@ -117,7 +129,7 @@ export default function LoginPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <Button variant="outline" className="w-full" onClick={handleGoogleLogin} type="button" disabled={googleLoading}>
-                    {googleLoading ? 'Signing in...' : <><GoogleIcon /> Sign in with Google</>}
+                    {googleLoading ? 'Redirecting to Google...' : <><GoogleIcon /> Sign in with Google</>}
                 </Button>
                 <div className="flex items-center gap-4">
                     <Separator className="flex-1" />

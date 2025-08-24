@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, AuthCredential } from 'firebase/auth';
+import { onAuthStateChanged, signOut, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult, AuthCredential } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 
@@ -13,6 +13,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   signup: (credential: any) => Promise<any>;
   loginWithGoogle: () => Promise<any>;
+  getGoogleRedirectResult: () => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,7 +40,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    return signInWithPopup(auth, provider);
+    return signInWithRedirect(auth, provider);
+  }
+
+  const getGoogleRedirectResult = async () => {
+    return getRedirectResult(auth);
   }
 
   const logout = async () => {
@@ -68,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, signup, loginWithGoogle }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, signup, loginWithGoogle, getGoogleRedirectResult }}>
       {children}
     </AuthContext.Provider>
   );
