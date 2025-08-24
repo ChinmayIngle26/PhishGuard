@@ -1,5 +1,7 @@
 
 import * as admin from 'firebase-admin';
+require('dotenv').config({ path: '.env' });
+
 
 let app: admin.app.App;
 
