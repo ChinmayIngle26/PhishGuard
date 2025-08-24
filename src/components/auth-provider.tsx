@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { onAuthStateChanged, signOut, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { getUserReputation } from '@/services/reputation';
+import { getUserReputation, createUserReputation } from '@/services/reputation';
 import type { UserReputation } from '@/services/reputation';
 
 interface AuthContextType {
@@ -16,6 +16,7 @@ interface AuthContextType {
   signup: (credential: any) => Promise<any>;
   loginWithGoogle: () => Promise<any>;
   getGoogleRedirectResult: () => Promise<any>;
+  initializeNewUser: (user: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,7 +25,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasMounted, setHasMounted] = useState(false);
 
   const fetchReputation = useCallback(async (uid: string) => {
     try {
@@ -36,8 +36,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const initializeNewUser = useCallback(async (user: User) => {
+    try {
+        await createUserReputation(user.uid, user.email ?? null);
+        await fetchReputation(user.uid);
+    } catch (error) {
+        console.error("Error during new user initialization:", error);
+        throw error;
+    }
+  }, [fetchReputation]);
+
+
   useEffect(() => {
-    setHasMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
       if (user) {
@@ -78,11 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
   
-  const value = { user, reputation, loading, login, logout, signup, loginWithGoogle, getGoogleRedirectResult, fetchReputation };
-
-  if (!hasMounted) {
-    return null;
-  }
+  const value = { user, reputation, loading, login, logout, signup, loginWithGoogle, getGoogleRedirectResult, initializeNewUser };
 
   return (
     <AuthContext.Provider value={value}>

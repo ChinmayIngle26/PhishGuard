@@ -25,7 +25,6 @@ import { useToast } from "@/hooks/use-toast";
 import { FirebaseError } from "firebase/app";
 import { PhishGuardLogo } from "@/components/phishguard-logo";
 import { Separator } from "@/components/ui/separator";
-import { createUserReputation } from "@/services/reputation";
 import type { UserCredential, User } from "firebase/auth";
 
 function GoogleIcon() {
@@ -44,24 +43,24 @@ export default function LoginPage() {
     const [loading, setLoading] = React.useState(false);
     const [googleLoading, setGoogleLoading] = React.useState(false);
 
-    const { login, signup, loginWithGoogle, getGoogleRedirectResult } = useAuth();
+    const { login, signup, loginWithGoogle, getGoogleRedirectResult, initializeNewUser } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
     const handleSuccessfulLogin = async (user: User, message: string) => {
         try {
-            await createUserReputation(user.uid, user.email ?? null);
+            await initializeNewUser(user);
             toast({ title: message });
             router.push('/');
         } catch (error) {
-            console.error("Failed to create user reputation:", error);
+            console.error("Failed to initialize user session:", error);
             toast({ variant: 'destructive', title: "Post-Login Error", description: "Could not initialize user data." });
         }
     };
     
     React.useEffect(() => {
         const checkRedirect = async () => {
-            setGoogleLoading(true); // Assume a redirect might be in progress
+            setGoogleLoading(true); 
             try {
                 const result = await getGoogleRedirectResult();
                 if (result && result.user) {
@@ -70,7 +69,7 @@ export default function LoginPage() {
             } catch (error) {
                 console.error("Google Login failed after redirect:", error);
                 const firebaseError = error as FirebaseError;
-                if (firebaseError.code !== 'auth/no-user-for-credential' && firebaseError.code !== 'auth/credential-already-in-use') {
+                 if (firebaseError.code !== 'auth/no-user-for-credential' && firebaseError.code !== 'auth/credential-already-in-use') {
                     toast({ variant: 'destructive', title: "Google Login Failed", description: firebaseError.message });
                 }
             } finally {
@@ -78,7 +77,7 @@ export default function LoginPage() {
             }
         };
         checkRedirect();
-    }, [getGoogleRedirectResult, router, toast]);
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();

@@ -45,11 +45,11 @@ function SubmitButton() {
   );
 }
 
-function FeedbackButton({ feedbackType, isPending, hasBeenSelected }: { feedbackType: 'good' | 'bad', isPending: boolean, hasBeenSelected: boolean }) {
+function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }: { feedbackType: 'good' | 'bad', isPending: boolean, hasBeenSelected: boolean, formAction: (payload: FormData) => void }) {
     const { user } = useAuth();
     const { toast } = useToast();
 
-    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const handleClick = (e: React.MouseEvent<HTMLFormElement>) => {
         if (!user) {
             e.preventDefault();
             toast({
@@ -57,41 +57,43 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected }: { feedback
                 description: "Please log in to provide feedback and earn rewards.",
                 action: <Button asChild variant="outline" size="sm"><Link href="/login">Login</Link></Button>
             });
+        } else {
+             formAction(new FormData(e.currentTarget));
         }
     }
 
     return (
-        <Button 
-            type="submit" 
-            name="feedbackType" 
-            value={feedbackType} 
-            variant="outline" 
-            size="sm" 
-            disabled={isPending}
-            onClick={handleClick}
-            className={cn({'bg-accent text-accent-foreground': hasBeenSelected})}
-        >
-            {isPending && hasBeenSelected ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
-            ) : (
-                hasBeenSelected ? (
-                    <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+        <form onSubmit={(e) => { e.preventDefault(); handleClick(e.currentTarget); }} className="flex items-center gap-2">
+            {user && <input type="hidden" name="userId" value={user.uid} />}
+            <Button 
+                type="submit" 
+                name="feedbackType" 
+                value={feedbackType} 
+                variant="outline" 
+                size="sm" 
+                disabled={isPending}
+                className={cn({'bg-accent text-accent-foreground': hasBeenSelected})}
+            >
+                {isPending && hasBeenSelected ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
                 ) : (
-                    feedbackType === 'good' ? <ThumbsUp className="mr-2 h-4 w-4" /> : <ThumbsDown className="mr-2 h-4 w-4" />
-                )
-            )}
-            {feedbackType === 'good' ? 'Yes' : 'No'}
-        </Button>
+                    hasBeenSelected ? (
+                        <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+                    ) : (
+                        feedbackType === 'good' ? <ThumbsUp className="mr-2 h-4 w-4" /> : <ThumbsDown className="mr-2 h-4 w-4" />
+                    )
+                )}
+                {feedbackType === 'good' ? 'Yes' : 'No'}
+            </Button>
+        </form>
     )
 }
 
 function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { riskLevel, reason, url, impersonatedBrand, recommendation } = result;
-    const { user } = useAuth();
     const { toast } = useToast();
     const [feedbackState, feedbackAction, isFeedbackPending] = useActionState(submitFeedbackAction, initialFeedbackState);
-    const [lastFeedback, setLastFeedback] = useState<'good' | 'bad' | null>(null);
-    const formRef = useRef<HTMLFormElement>(null);
+    const [submittedFeedback, setSubmittedFeedback] = useState<'good' | 'bad' | null>(null);
     
     useEffect(() => {
         if (feedbackState.success) {
@@ -99,15 +101,11 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 title: "Feedback Submitted",
                 description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
             });
-            // Track the last successful feedback
-            if (formRef.current) {
-                 // The `pending` prop from `useActionState` is not sufficient here as we need the button name.
-                 // We get the submitted feedback type from the form data.
-                const formData = new FormData(formRef.current);
-                const feedbackType = (document.activeElement as HTMLButtonElement)?.value as 'good' | 'bad' | undefined;
-                if(feedbackType) {
-                    setLastFeedback(feedbackType);
-                }
+            // This is a bit of a hack to find out which button was clicked.
+            // In a real app, you might handle this more cleanly.
+            const lastAction = (feedbackState as any).lastAction;
+            if (lastAction) {
+                setSubmittedFeedback(lastAction);
             }
         }
         if (feedbackState.error) {
@@ -199,14 +197,12 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 <div className="pt-4 border-t">
                      <div className="flex justify-center items-center gap-4">
                         <p className="text-sm text-muted-foreground">Was this result helpful?</p>
-                        <form action={feedbackAction} ref={formRef} className="flex items-center gap-2">
-                            {user && <input type="hidden" name="userId" value={user.uid} />}
-                            <input type="hidden" name="url" value={url} />
-                            <FeedbackButton feedbackType="good" isPending={isFeedbackPending} hasBeenSelected={lastFeedback === 'good'} />
-                            <FeedbackButton feedbackType="bad" isPending={isFeedbackPending} hasBeenSelected={lastFeedback === 'bad'} />
-                        </form>
+                        <div className="flex items-center gap-2">
+                             <FeedbackButton feedbackType="good" isPending={isFeedbackPending} hasBeenSelected={submittedFeedback === 'good'} formAction={feedbackAction} />
+                             <FeedbackButton feedbackType="bad" isPending={isFeedbackPending} hasBeenSelected={submittedFeedback === 'bad'} formAction={feedbackAction} />
+                        </div>
                     </div>
-                     {lastFeedback && (
+                     {submittedFeedback && (
                         <p className="text-xs text-center text-muted-foreground mt-3 animate-in fade-in-0">
                             Thank you for your feedback!
                         </p>
