@@ -173,6 +173,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                     <p className="text-sm text-center text-muted-foreground mb-3">Was this result helpful?</p>
                     <form action={feedbackAction} ref={formRef} className="flex justify-center gap-4">
                         {user && <input type="hidden" name="userId" value={user.uid} />}
+                        {user && <input type="hidden" name="userEmail" value={user.email ?? ''} />}
                         <FeedbackButton feedbackType="good" />
                         <FeedbackButton feedbackType="bad" />
                     </form>
@@ -231,5 +232,3 @@ export function UrlScanner() {
     </div>
   );
 }
-
-    

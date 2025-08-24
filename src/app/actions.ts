@@ -2,8 +2,9 @@
 'use server';
 
 import { analyzeUrl, AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
-import { addReputationPoints, getUserReputation } from '@/services/reputation';
+import { addReputationPoints, createUserReputation, getUserReputation } from '@/services/reputation';
 import { z } from 'zod';
+import { auth } from '@/lib/firebase';
 
 const ScanUrlSchema = z.object({
   url: z.string().url({ message: 'Please enter a valid URL.' }),
@@ -47,12 +48,14 @@ export async function scanUrlAction(prevState: ScanState, formData: FormData): P
 
 const FeedbackSchema = z.object({
     userId: z.string().min(1, { message: 'User ID is required.' }),
+    userEmail: z.string().email().nullable(),
     feedbackType: z.enum(['good', 'bad']),
 });
 
 export async function submitFeedbackAction(prevState: any, formData: FormData): Promise<{ success: boolean; error?: string }> {
     const validatedFields = FeedbackSchema.safeParse({
         userId: formData.get('userId'),
+        userEmail: formData.get('userEmail'),
         feedbackType: formData.get('feedbackType'),
     });
     
@@ -61,11 +64,14 @@ export async function submitFeedbackAction(prevState: any, formData: FormData): 
     }
 
     try {
-        const { userId, feedbackType } = validatedFields.data;
+        const { userId, userEmail, feedbackType } = validatedFields.data;
         const userRep = await getUserReputation(userId);
+
+        // If user reputation doesn't exist, create it.
         if (!userRep) {
-            await createUserReputation(userId, null);
+            await createUserReputation(userId, userEmail);
         }
+
         await addReputationPoints(userId, feedbackType);
         return { success: true };
     } catch (error) {

@@ -53,7 +53,7 @@ export default function LoginPage() {
             try {
                 const result = await getGoogleRedirectResult();
                 if (result && result.user) {
-                    await createUserReputation(result.user.uid, result.user.email);
+                    await createUserReputation(result.user.uid, result.user.email ?? null);
                     toast({ title: "Login Successful", description: "Welcome!" });
                     router.push('/');
                 }
@@ -93,7 +93,7 @@ export default function LoginPage() {
         try {
             const userCredential = await signup({ email: signupEmail, password: signupPassword });
             if (userCredential && userCredential.user) {
-                await createUserReputation(userCredential.user.uid, userCredential.user.email);
+                await createUserReputation(userCredential.user.uid, userCredential.user.email ?? null);
             }
             toast({ title: "Signup Successful", description: "Welcome to PhishGuard!" });
             router.push('/');
