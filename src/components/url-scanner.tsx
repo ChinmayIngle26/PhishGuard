@@ -1,7 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from 'react-dom';
-import { useEffect, useRef, useState } from 'react';
+import { useFormStatus } from 'react-dom';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { scanUrlAction } from '@/app/actions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -136,7 +136,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
 
 
 export function UrlScanner() {
-  const [state, formAction] = useFormState(scanUrlAction, initialState);
+  const [state, formAction] = useActionState(scanUrlAction, initialState);
   const [result, setResult] = useState<ScanResultWithUrl | null>(null);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
