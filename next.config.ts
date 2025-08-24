@@ -1,8 +1,11 @@
 
 import type {NextConfig} from 'next';
-import { initializeFirebaseAdmin } from './src/lib/firebase-admin';
 
+// IMPORTANT: This file is the entry point for the Next.js server.
+// We load environment variables and initialize server-side services here
+// to ensure they are available to all server-side code.
 require('dotenv').config({ path: './.env' });
+import { initializeFirebaseAdmin } from './src/lib/firebase-admin';
 initializeFirebaseAdmin();
 
 const nextConfig: NextConfig = {
