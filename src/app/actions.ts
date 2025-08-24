@@ -45,14 +45,21 @@ export async function scanUrlAction(prevState: ScanUrlState, formData: FormData)
   try {
     const result = await analyzeUrl({ url });
 
-    // If the URL is dangerous, add it to the threat feed
+    // If the URL is dangerous, add it to the threat feed.
+    // This is now in its own try/catch so a DB write failure doesn't
+    // prevent the user from seeing their scan result.
     if (result.riskLevel >= DANGEROUS_RISK_THRESHOLD) {
-      await addThreat({
-        url: url,
-        riskLevel: result.riskLevel,
-        reason: result.reason,
-        timestamp: new Date().toISOString(),
-      });
+      try {
+        await addThreat({
+          url: url,
+          riskLevel: result.riskLevel,
+          reason: result.reason,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (threatError) {
+          console.error("Failed to add threat to database, but returning success to user.", threatError);
+          // We don't return an error here because the primary action (scanning) succeeded.
+      }
     }
 
     return {
