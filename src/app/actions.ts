@@ -1,6 +1,7 @@
 
 'use server';
 
+import 'dotenv/config';
 import { analyzeEmail, AnalyzeEmailOutput } from '@/ai/flows/analyze-email-flow';
 import { addReputationPoints, getUserReputation } from '@/services/reputation';
 import { z } from 'zod';
