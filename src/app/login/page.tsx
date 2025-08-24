@@ -87,7 +87,9 @@ export default function LoginPage() {
         } catch (error) {
             console.error("Google Login failed:", error);
             const firebaseError = error as FirebaseError;
-            toast({ variant: 'destructive', title: "Google Login Failed", description: firebaseError.message });
+            if (firebaseError.code !== 'auth/popup-closed-by-user') {
+              toast({ variant: 'destructive', title: "Google Login Failed", description: firebaseError.message });
+            }
         } finally {
             setGoogleLoading(false);
         }
