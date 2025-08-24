@@ -59,33 +59,55 @@ function displayError(message) {
     resultDiv.innerHTML = `
         <div class="result-card dangerous">
             <div class="result-header">Error</div>
-            <p>${message}</p>
+            <p class="result-reason">${message}</p>
         </div>
     `;
 }
 
 function displayResult(result) {
-  const { isPhishing, confidence, reason } = result;
+  const { riskLevel, reason, impersonatedBrand, recommendation } = result;
   
-  let status, cardClass, icon;
+  let status, cardClass;
 
-  if (isPhishing) {
-    if (confidence >= 0.75) {
+  if (riskLevel > 75) {
       status = 'Dangerous';
       cardClass = 'dangerous';
-    } else {
+  } else if (riskLevel > 40) {
       status = 'Suspicious';
       cardClass = 'suspicious';
-    }
+  } else if (riskLevel > 10) {
+    status = 'Low Risk';
+    cardClass = 'low-risk';
   } else {
-    status = 'Safe';
-    cardClass = 'safe';
+      status = 'Safe';
+      cardClass = 'safe';
   }
   
+  let impersonatedHtml = '';
+  if (impersonatedBrand) {
+    impersonatedHtml = `
+      <div class="result-section">
+        <h4>Impersonated Brand</h4>
+        <p>${impersonatedBrand}</p>
+      </div>
+    `;
+  }
+
   resultDiv.innerHTML = `
     <div class="result-card ${cardClass}">
-      <div class="result-header">${status}</div>
-      <p class="result-reason">${reason}</p>
+      <div class="result-header">
+        <span>${status}</span>
+        <span class="risk-score">${riskLevel}/100</span>
+      </div>
+      <div class="result-section">
+        <h4>AI Analysis</h4>
+        <p>${reason}</p>
+      </div>
+      ${impersonatedHtml}
+      <div class="result-section recommendation">
+        <h4>Recommendation</h4>
+        <p>${recommendation}</p>
+      </div>
     </div>
   `;
 }
