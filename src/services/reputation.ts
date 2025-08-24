@@ -9,7 +9,7 @@ const POINT_VALUES = {
     BAD_FEEDBACK: 1, 
 };
 
-interface UserReputation {
+export interface UserReputation {
     uid: string;
     email: string | null;
     guardPoints: number;
