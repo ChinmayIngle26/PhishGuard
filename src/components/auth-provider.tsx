@@ -64,9 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const signup = async (credential: any) => {
     const userCredential = await createUserWithEmailAndPassword(auth, credential.email, credential.password);
-    if (userCredential.user) {
-        await createUserReputation(userCredential.user.uid, userCredential.user.email);
-    }
+    // The onAuthStateChanged listener will handle reputation creation.
     return userCredential;
   }
 
@@ -78,13 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const getGoogleRedirectResult = async () => {
     try {
         const result = await getRedirectResult(auth);
-        if (result?.user) {
-            // Ensure a reputation profile exists for new Google users.
-            const userRep = await getUserReputation(result.user.uid);
-            if (!userRep) {
-                await createUserReputation(result.user.uid, result.user.email);
-            }
-        }
+        // The onAuthStateChanged listener will handle reputation creation for new Google users.
         return result;
     } catch (error) {
         console.error("Google Redirect Result Error:", error);
