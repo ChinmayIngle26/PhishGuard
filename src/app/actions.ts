@@ -2,7 +2,7 @@
 'use server';
 
 import { analyzeUrl, AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
-import { addReputationPoints } from '@/services/reputation';
+import { addReputationPoints, getUserReputation } from '@/services/reputation';
 import { z } from 'zod';
 
 const ScanUrlSchema = z.object({
@@ -62,13 +62,18 @@ export async function submitFeedbackAction(prevState: any, formData: FormData): 
 
     try {
         const { userId, feedbackType } = validatedFields.data;
+        // Check if the user exists before trying to add points.
+        const userRep = await getUserReputation(userId);
+        if (!userRep) {
+            return { success: false, error: 'User reputation profile not found.' };
+        }
         await addReputationPoints(userId, feedbackType);
         return { success: true };
     } catch (error) {
         console.error("Error submitting feedback:", error);
         // It's better to return a generic error to the user
-        if (error instanceof Error && error.message.includes('permission-denied')) {
-             return { success: false, error: 'You do not have permission to perform this action.' };
+        if (error instanceof Error && error.message.includes('permission-denied') || error instanceof Error && error.message.includes('insufficient permissions')) {
+             return { success: false, error: 'You do not have permission to perform this action. Please check Firestore rules.' };
         }
         return { success: false, error: 'Failed to submit feedback. Please try again.' };
     }

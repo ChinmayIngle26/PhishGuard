@@ -49,6 +49,8 @@ export async function addReputationPoints(uid: string, feedbackType: 'good' | 'b
     const userReputationRef = doc(db, 'reputations', uid);
     const pointsToAdd = feedbackType === 'good' ? POINT_VALUES.GOOD_FEEDBACK : POINT_VALUES.BAD_FEEDBACK;
 
+    // We can now safely call updateDoc from the server.
+    // The security rules will ensure only the authenticated user can trigger this.
     await updateDoc(userReputationRef, {
         guardPoints: increment(pointsToAdd),
         feedbackCount: increment(1),
