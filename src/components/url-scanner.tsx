@@ -1,0 +1,184 @@
+"use client";
+
+import { useFormState, useFormStatus } from 'react-dom';
+import { useEffect, useRef, useState } from 'react';
+import { scanUrlAction } from '@/app/actions';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import type { AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
+import { ShieldCheck, ShieldAlert, ShieldX, ThumbsUp, ThumbsDown, Loader2, Link as LinkIcon } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
+type ScanResultWithUrl = AnalyzeUrlOutput & { url: string };
+
+const initialState = {
+  success: false,
+  data: null,
+  error: null,
+};
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending} className="w-full sm:w-auto flex-shrink-0">
+      {pending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Scanning...
+        </>
+      ) : (
+        'Scan URL'
+      )}
+    </Button>
+  );
+}
+
+function ResultCard({ result }: { result: ScanResultWithUrl }) {
+    const { isPhishing, confidence, reason, url } = result;
+
+    let status: 'Safe' | 'Suspicious' | 'Dangerous' | 'Probably Safe';
+    let colorClass: string;
+    let Icon: React.ElementType;
+    let progressClass: string;
+    let badgeClass: string;
+
+    if (isPhishing) {
+        if (confidence >= 0.75) {
+            status = 'Dangerous';
+            colorClass = 'text-destructive';
+            Icon = ShieldX;
+            progressClass = '[&>div]:bg-destructive';
+            badgeClass = 'border-destructive/50 bg-destructive/10 text-destructive';
+        } else {
+            status = 'Suspicious';
+            colorClass = 'text-accent';
+            Icon = ShieldAlert;
+            progressClass = '[&>div]:bg-accent';
+            badgeClass = 'border-accent/50 bg-accent/10 text-accent';
+        }
+    } else {
+        if (confidence >= 0.75) {
+            status = 'Safe';
+            colorClass = 'text-safe-default';
+            Icon = ShieldCheck;
+            progressClass = '[&>div]:bg-safe-default';
+            badgeClass = 'border-safe-default/50 bg-safe-default/10 text-safe-default';
+        } else {
+            status = 'Probably Safe';
+            colorClass = 'text-primary';
+            Icon = ShieldCheck;
+            progressClass = '[&>div]:bg-primary';
+            badgeClass = 'border-primary/50 bg-primary/10 text-primary';
+        }
+    }
+
+    const { toast } = useToast();
+    
+    const handleFeedback = (feedback: 'good' | 'bad') => {
+        toast({
+            title: "Feedback Submitted",
+            description: "Thank you for helping improve PhishGuard!",
+        });
+    }
+
+    return (
+        <Card className="w-full max-w-2xl animate-in fade-in-0 zoom-in-95">
+            <CardHeader>
+                <div className="flex items-start sm:items-center gap-4 flex-col sm:flex-row">
+                    <Icon className={cn("h-12 w-12 shrink-0", colorClass)} />
+                    <div className='w-full'>
+                        <CardTitle className={cn("text-2xl", colorClass)}>{status}</CardTitle>
+                        <CardDescription>Scan result for the submitted URL.</CardDescription>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted rounded-md overflow-hidden border">
+                    <LinkIcon className="h-4 w-4 shrink-0"/>
+                    <span className="truncate font-mono">{url}</span>
+                </div>
+                
+                <div>
+                    <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium">Confidence Score</span>
+                        <Badge variant="outline" className={cn('font-semibold', badgeClass)}>
+                            {(confidence * 100).toFixed(0)}%
+                        </Badge>
+                    </div>
+                    <Progress value={confidence * 100} className={cn('h-2', progressClass)} />
+                </div>
+
+                <div>
+                    <h4 className="font-semibold mb-2">AI Analysis</h4>
+                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md border">{reason}</p>
+                </div>
+
+                <div className="pt-4 border-t">
+                    <p className="text-sm text-center text-muted-foreground mb-3">Was this result helpful?</p>
+                    <div className="flex justify-center gap-4">
+                        <Button variant="outline" size="sm" onClick={() => handleFeedback('good')}>
+                            <ThumbsUp className="mr-2 h-4 w-4" /> Yes
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleFeedback('bad')}>
+                            <ThumbsDown className="mr-2 h-4 w-4" /> No
+                        </Button>
+                    </div>
+                     <p className="text-xs text-center text-muted-foreground mt-3 max-w-sm mx-auto">Your feedback is anonymized and helps improve our detection engine for everyone.</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+
+export function UrlScanner() {
+  const [state, formAction] = useFormState(scanUrlAction, initialState);
+  const [result, setResult] = useState<ScanResultWithUrl | null>(null);
+  const { toast } = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
+  
+  useEffect(() => {
+    if (state.success && state.data) {
+        const url = formRef.current?.url.value || '';
+        setResult({ ...state.data, url });
+    } else if (state.error) {
+      toast({
+        variant: 'destructive',
+        title: 'Scan Failed',
+        description: state.error,
+      });
+      setResult(null);
+    }
+  }, [state, toast]);
+
+  return (
+    <div className="w-full flex flex-col items-center gap-8">
+      <Card className="w-full max-w-2xl shadow-lg">
+        <CardHeader>
+          <CardTitle>AI-Powered URL Scanner</CardTitle>
+          <CardDescription>Enter a URL to scan for phishing threats in real-time.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form ref={formRef} action={formAction} className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                    name="url"
+                    type="url"
+                    placeholder="https://example.com"
+                    required
+                    className="flex-grow text-base"
+                />
+                <SubmitButton />
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+      
+      {result && <ResultCard result={result} />}
+    </div>
+  );
+}
