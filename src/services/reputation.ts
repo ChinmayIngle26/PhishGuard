@@ -1,13 +1,8 @@
 
 'use server';
 
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, increment, DocumentReference } from 'firebase/firestore';
-
-const POINT_VALUES = {
-    GOOD_FEEDBACK: 10,
-    BAD_FEEDBACK: 1, 
-};
+import { adminDb } from '@/lib/firebase-admin';
+import { increment } from 'firebase-admin/firestore';
 
 export interface UserReputation {
     uid: string;
@@ -16,18 +11,24 @@ export interface UserReputation {
     feedbackCount: number;
 }
 
+const POINT_VALUES = {
+    GOOD_FEEDBACK: 10,
+    BAD_FEEDBACK: 1, 
+};
+
+
 /**
- * Creates a new user reputation document in Firestore.
+ * Creates a new user reputation document in Firestore using the Admin SDK.
  * This is typically called when a user signs up.
  * @param uid - The user's unique ID from Firebase Auth.
  * @param email - The user's email address.
  */
 export async function createUserReputation(uid: string, email: string | null): Promise<void> {
-    const userReputationRef = doc(db, 'reputations', uid) as DocumentReference<UserReputation>;
-    const userReputationSnap = await getDoc(userReputationRef);
+    const userReputationRef = adminDb.collection('reputations').doc(uid);
+    const userReputationSnap = await userReputationRef.get();
 
-    if (!userReputationSnap.exists()) {
-        await setDoc(userReputationRef, {
+    if (!userReputationSnap.exists) {
+        await userReputationRef.set({
             uid: uid,
             email: email,
             guardPoints: 0,
@@ -37,7 +38,7 @@ export async function createUserReputation(uid: string, email: string | null): P
 }
 
 /**
- * Adds points to a user's reputation for providing feedback.
+ * Adds points to a user's reputation for providing feedback using the Admin SDK.
  * @param uid - The user's unique ID.
  * @param feedbackType - The type of feedback given ('good' or 'bad').
  */
@@ -46,30 +47,28 @@ export async function addReputationPoints(uid: string, feedbackType: 'good' | 'b
         throw new Error("User ID is required to add reputation points.");
     }
 
-    const userReputationRef = doc(db, 'reputations', uid);
+    const userReputationRef = adminDb.collection('reputations').doc(uid);
     const pointsToAdd = feedbackType === 'good' ? POINT_VALUES.GOOD_FEEDBACK : POINT_VALUES.BAD_FEEDBACK;
 
-    // We can now safely call updateDoc from the server.
-    // The security rules will ensure only the authenticated user can trigger this.
-    await updateDoc(userReputationRef, {
+    await userReputationRef.update({
         guardPoints: increment(pointsToAdd),
         feedbackCount: increment(1),
     });
 }
 
 /**
- * Fetches a user's reputation data from Firestore.
+ * Fetches a user's reputation data from Firestore using the Admin SDK.
  * @param uid - The user's unique ID.
  * @returns The user's reputation data, or null if not found.
  */
 export async function getUserReputation(uid: string): Promise<UserReputation | null> {
     if (!uid) return null;
 
-    const userReputationRef = doc(db, 'reputations', uid) as DocumentReference<UserReputation>;
-    const userReputationSnap = await getDoc(userReputationRef);
+    const userReputationRef = adminDb.collection('reputations').doc(uid);
+    const userReputationSnap = await userReputationRef.get();
 
-    if (userReputationSnap.exists()) {
-        return userReputationSnap.data();
+    if (userReputationSnap.exists) {
+        return userReputationSnap.data() as UserReputation;
     } else {
         return null;
     }

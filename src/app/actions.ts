@@ -62,20 +62,14 @@ export async function submitFeedbackAction(prevState: any, formData: FormData): 
 
     try {
         const { userId, feedbackType } = validatedFields.data;
-        // Check if the user exists before trying to add points.
         const userRep = await getUserReputation(userId);
         if (!userRep) {
-            // This case should be rare since AuthProvider creates the profile, but it's good to handle.
-            return { success: false, error: 'User reputation profile not found. Please try logging out and back in.' };
+            return { success: false, error: 'User reputation profile not found.' };
         }
         await addReputationPoints(userId, feedbackType);
         return { success: true };
     } catch (error) {
         console.error("Error submitting feedback:", error);
-        // It's better to return a generic error to the user
-        if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
-             return { success: false, error: 'You do not have permission to perform this action. Please check Firestore rules.' };
-        }
         return { success: false, error: 'Failed to submit feedback. Please try again.' };
     }
 }
