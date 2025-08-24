@@ -45,17 +45,51 @@ function SubmitButton() {
   );
 }
 
+function FeedbackButton({ feedbackType }: { feedbackType: 'good' | 'bad' }) {
+    const { pending } = useFormStatus();
+    const { user } = useAuth();
+    const { toast } = useToast();
+
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+        if (!user) {
+            e.preventDefault();
+            toast({
+                title: "Login Required",
+                description: "Please log in to provide feedback and earn rewards.",
+                action: <Button asChild variant="outline" size="sm"><Link href="/login">Login</Link></Button>
+            });
+        }
+    }
+
+    return (
+        <Button 
+            type="submit" 
+            name="feedbackType" 
+            value={feedbackType} 
+            variant="outline" 
+            size="sm" 
+            disabled={pending}
+            onClick={handleClick}
+        >
+            {pending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+            ) : (
+                feedbackType === 'good' ? <ThumbsUp className="mr-2 h-4 w-4" /> : <ThumbsDown className="mr-2 h-4 w-4" />
+            )}
+            {feedbackType === 'good' ? 'Yes' : 'No'}
+        </Button>
+    )
+}
+
 function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { riskLevel, reason, url } = result;
     const { user } = useAuth();
     const { toast } = useToast();
     const [feedbackState, feedbackAction] = useActionState(submitFeedbackAction, initialFeedbackState);
     const formRef = useRef<HTMLFormElement>(null);
-    const { pending } = useFormStatus();
-
-
+    
     useEffect(() => {
-        if(feedbackState.success) {
+        if (feedbackState.success) {
             toast({
                 title: "Feedback Submitted",
                 description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
@@ -69,22 +103,6 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
             });
         }
     }, [feedbackState, toast]);
-
-    const handleFeedbackClick = (feedbackType: 'good' | 'bad') => {
-        if (!user) {
-            toast({
-                title: "Login Required",
-                description: "Please log in to provide feedback and earn rewards.",
-                action: <Button asChild variant="outline" size="sm"><Link href="/login">Login</Link></Button>
-            });
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('userId', user.uid);
-        formData.append('feedbackType', feedbackType);
-        feedbackAction(formData);
-    }
 
     let status: 'Safe' | 'Low Risk' | 'Suspicious' | 'Dangerous';
     let colorClass: string;
@@ -154,14 +172,9 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 <div className="pt-4 border-t">
                     <p className="text-sm text-center text-muted-foreground mb-3">Was this result helpful?</p>
                     <form action={feedbackAction} ref={formRef} className="flex justify-center gap-4">
-                         <Button variant="outline" size="sm" onClick={() => handleFeedbackClick('good')} disabled={pending}>
-                            {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ThumbsUp className="mr-2 h-4 w-4" /> }
-                             Yes
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleFeedbackClick('bad')} disabled={pending}>
-                            {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ThumbsDown className="mr-2 h-4 w-4" />}
-                             No
-                        </Button>
+                        {user && <input type="hidden" name="userId" value={user.uid} />}
+                        <FeedbackButton feedbackType="good" />
+                        <FeedbackButton feedbackType="bad" />
                     </form>
                      <p className="text-xs text-center text-muted-foreground mt-3 max-w-sm mx-auto">Your feedback is anonymized and helps improve our detection engine for everyone.</p>
                 </div>
@@ -218,3 +231,5 @@ export function UrlScanner() {
     </div>
   );
 }
+
+    
