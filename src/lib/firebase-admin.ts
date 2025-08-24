@@ -8,10 +8,7 @@ let app: admin.app.App;
  * This function is idempotent (safe to call multiple times).
  */
 function initializeFirebaseAdmin() {
-  if (admin.apps.length > 0) {
-    if (!app) {
-        app = admin.app();
-    }
+  if (admin.apps.length > 0 && app) {
     return;
   }
 

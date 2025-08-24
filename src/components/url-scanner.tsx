@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useFormStatus, useFormState } from 'react-dom';
+import { useFormState } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import { submitFeedbackAction } from '@/app/actions';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,7 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }
     const { user } = useAuth();
     const { toast } = useToast();
 
-    const handleClick = (e: React.MouseEvent<HTMLFormElement>) => {
+    const handleClick = (e: React.FormEvent<HTMLFormElement>) => {
         if (!user) {
             e.preventDefault();
             toast({
@@ -39,7 +39,7 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }
     }
 
     return (
-        <form action={formAction} onSubmit={(e) => { handleClick(e.currentTarget); }} className="flex items-center gap-2">
+        <form action={formAction} onSubmit={(e) => { handleClick(e); }} className="flex items-center gap-2">
             {user && <input type="hidden" name="userId" value={user.uid} />}
             <input type="hidden" name="feedbackType" value={feedbackType} />
             <Button 
@@ -69,6 +69,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { toast } = useToast();
     const [feedbackState, feedbackAction, isFeedbackPending] = useFormState(submitFeedbackAction, initialFeedbackState);
     const [submittedFeedback, setSubmittedFeedback] = useState<'good' | 'bad' | null>(null);
+    const formRef = useRef<HTMLFormElement>(null);
     
     useEffect(() => {
         if (feedbackState.success) {
@@ -76,10 +77,11 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 title: "Feedback Submitted",
                 description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
             });
-            // This is a bit of a hack to find out which button was clicked.
-            const lastAction = (feedbackState as any).lastAction;
-            if (lastAction) {
-                setSubmittedFeedback(lastAction);
+            // This is a hack to know which button was clicked without a lot of state.
+            if (formRef.current) {
+                const formData = new FormData(formRef.current);
+                const feedback = formData.get('feedbackType') as 'good' | 'bad';
+                setSubmittedFeedback(feedback);
             }
         }
         if (feedbackState.error) {
@@ -171,7 +173,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 <div className="pt-4 border-t">
                      <div className="flex justify-center items-center gap-4">
                         <p className="text-sm text-muted-foreground">Was this result helpful?</p>
-                        <div className="flex items-center gap-2">
+                        <div ref={formRef} className="flex items-center gap-2">
                              <FeedbackButton feedbackType="good" isPending={isFeedbackPending} hasBeenSelected={submittedFeedback === 'good'} formAction={feedbackAction} />
                              <FeedbackButton feedbackType="bad" isPending={isFeedbackPending} hasBeenSelected={submittedFeedback === 'bad'} formAction={feedbackAction} />
                         </div>
@@ -205,7 +207,7 @@ export function UrlScanner() {
     const url = formData.get('url') as string;
 
     try {
-        const response = await fetch('/api/actions/scan', {
+        const response = await fetch('/api/scan', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url }),
@@ -222,11 +224,6 @@ export function UrlScanner() {
     } catch (err: any) {
         const errorMessage = err.message || 'An unexpected error occurred. Please try again later.';
         setError(errorMessage);
-        toast({
-            variant: 'destructive',
-            title: 'Scan Failed',
-            description: errorMessage,
-        });
     } finally {
         setPending(false);
     }
