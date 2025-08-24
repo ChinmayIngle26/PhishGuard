@@ -2,7 +2,7 @@
 "use client";
 
 import { useFormStatus } from 'react-dom';
-import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { scanUrlAction, submitFeedbackAction } from '@/app/actions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,11 +18,16 @@ import Link from 'next/link';
 
 type ScanResultWithUrl = AnalyzeUrlOutput & { url: string };
 
-const initialState = {
+const initialScanState = {
   success: false,
   data: null,
   error: null,
 };
+
+const initialFeedbackState = {
+    success: false,
+    error: undefined,
+}
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -44,7 +49,42 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { isPhishing, confidence, reason, url } = result;
     const { user } = useAuth();
     const { toast } = useToast();
-    const [isPending, startTransition] = useTransition();
+    const [feedbackState, feedbackAction] = useActionState(submitFeedbackAction, initialFeedbackState);
+    const formRef = useRef<HTMLFormElement>(null);
+    const { pending } = useFormStatus();
+
+
+    useEffect(() => {
+        if(feedbackState.success) {
+            toast({
+                title: "Feedback Submitted",
+                description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
+            });
+        }
+        if (feedbackState.error) {
+            toast({
+                variant: 'destructive',
+                title: "Feedback Failed",
+                description: feedbackState.error,
+            });
+        }
+    }, [feedbackState, toast]);
+
+    const handleFeedbackClick = (feedbackType: 'good' | 'bad') => {
+        if (!user) {
+            toast({
+                title: "Login Required",
+                description: "Please log in to provide feedback and earn rewards.",
+                action: <Button asChild variant="outline" size="sm"><Link href="/login">Login</Link></Button>
+            });
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('userId', user.uid);
+        formData.append('feedbackType', feedbackType);
+        feedbackAction(formData);
+    }
 
     let status: 'Safe' | 'Suspicious' | 'Dangerous' | 'Probably Safe';
     let colorClass: string;
@@ -61,7 +101,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
             badgeClass = 'border-destructive/50 bg-destructive/10 text-destructive';
         } else {
             status = 'Suspicious';
-            colorClass = 'text-yellow-500'; // Using direct color
+            colorClass = 'text-yellow-500';
             Icon = ShieldAlert;
             progressClass = '[&>div]:bg-yellow-500';
             badgeClass = 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500';
@@ -80,33 +120,6 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
             progressClass = '[&>div]:bg-primary';
             badgeClass = 'border-primary/50 bg-primary/10 text-primary';
         }
-    }
-
-    const handleFeedback = (feedbackType: 'good' | 'bad') => {
-        if (!user) {
-            toast({
-                title: "Login Required",
-                description: "Please log in to provide feedback and earn rewards.",
-                action: <Button asChild variant="outline" size="sm"><Link href="/login">Login</Link></Button>
-            });
-            return;
-        }
-        
-        startTransition(async () => {
-            const result = await submitFeedbackAction(user.uid, feedbackType);
-            if (result.success) {
-                toast({
-                    title: "Feedback Submitted",
-                    description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
-                });
-            } else {
-                 toast({
-                    variant: 'destructive',
-                    title: "Feedback Failed",
-                    description: result.error || 'An unexpected error occurred.',
-                });
-            }
-        });
     }
 
     return (
@@ -143,16 +156,16 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
 
                 <div className="pt-4 border-t">
                     <p className="text-sm text-center text-muted-foreground mb-3">Was this result helpful?</p>
-                    <div className="flex justify-center gap-4">
-                        <Button variant="outline" size="sm" onClick={() => handleFeedback('good')} disabled={isPending}>
-                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ThumbsUp className="mr-2 h-4 w-4" /> }
+                    <form action={feedbackAction} ref={formRef} className="flex justify-center gap-4">
+                         <Button variant="outline" size="sm" onClick={() => handleFeedbackClick('good')} disabled={pending}>
+                            {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ThumbsUp className="mr-2 h-4 w-4" /> }
                              Yes
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleFeedback('bad')} disabled={isPending}>
-                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ThumbsDown className="mr-2 h-4 w-4" />}
+                        <Button variant="outline" size="sm" onClick={() => handleFeedbackClick('bad')} disabled={pending}>
+                            {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ThumbsDown className="mr-2 h-4 w-4" />}
                              No
                         </Button>
-                    </div>
+                    </form>
                      <p className="text-xs text-center text-muted-foreground mt-3 max-w-sm mx-auto">Your feedback is anonymized and helps improve our detection engine for everyone.</p>
                 </div>
             </CardContent>
@@ -162,24 +175,24 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
 
 
 export function UrlScanner() {
-  const [state, formAction] = useActionState(scanUrlAction, initialState);
-  const [result, setResult] = useState<ScanResultWithUrl | null>(null);
+  const [scanState, formAction] = useActionState(scanUrlAction, initialScanState);
+  const [result, setResult] = React.useState<ScanResultWithUrl | null>(null);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   
   useEffect(() => {
-    if (state.success && state.data) {
+    if (scanState.success && scanState.data) {
         const url = formRef.current?.url.value || '';
-        setResult({ ...state.data, url });
-    } else if (state.error) {
+        setResult({ ...scanState.data, url });
+    } else if (scanState.error) {
       toast({
         variant: 'destructive',
         title: 'Scan Failed',
-        description: state.error,
+        description: scanState.error,
       });
       setResult(null);
     }
-  }, [state, toast]);
+  }, [scanState, toast]);
 
   return (
     <div className="w-full flex flex-col items-center gap-8 px-4">

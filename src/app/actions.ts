@@ -46,22 +46,30 @@ export async function scanUrlAction(prevState: ScanState, formData: FormData): P
 }
 
 const FeedbackSchema = z.object({
-    userId: z.string(),
+    userId: z.string().min(1, { message: 'User ID is required.' }),
     feedbackType: z.enum(['good', 'bad']),
 });
 
-export async function submitFeedbackAction(userId: string, feedbackType: 'good' | 'bad'): Promise<{ success: boolean; error?: string }> {
-    const validation = FeedbackSchema.safeParse({ userId, feedbackType });
+export async function submitFeedbackAction(prevState: any, formData: FormData): Promise<{ success: boolean; error?: string }> {
+    const validatedFields = FeedbackSchema.safeParse({
+        userId: formData.get('userId'),
+        feedbackType: formData.get('feedbackType'),
+    });
     
-    if (!validation.success) {
+    if (!validatedFields.success) {
         return { success: false, error: 'Invalid input.' };
     }
 
     try {
+        const { userId, feedbackType } = validatedFields.data;
         await addReputationPoints(userId, feedbackType);
         return { success: true };
     } catch (error) {
         console.error("Error submitting feedback:", error);
-        return { success: false, error: 'Failed to submit feedback.' };
+        // It's better to return a generic error to the user
+        if (error instanceof Error && error.message.includes('permission-denied')) {
+             return { success: false, error: 'You do not have permission to perform this action.' };
+        }
+        return { success: false, error: 'Failed to submit feedback. Please try again.' };
     }
 }
