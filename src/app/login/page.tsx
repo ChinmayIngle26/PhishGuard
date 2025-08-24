@@ -48,16 +48,23 @@ export default function LoginPage() {
 
     React.useEffect(() => {
         const checkRedirect = async () => {
+            setGoogleLoading(true); // Assume a redirect might be in progress
             try {
                 const result = await getGoogleRedirectResult();
                 if (result) {
+                    // AuthProvider's onAuthStateChanged will handle profile creation
                     toast({ title: "Login Successful", description: "Welcome!" });
                     router.push('/');
                 }
             } catch (error) {
                 console.error("Google Login failed after redirect:", error);
                 const firebaseError = error as FirebaseError;
-                toast({ variant: 'destructive', title: "Google Login Failed", description: firebaseError.message });
+                // Avoid showing an error if there was no redirect attempt (e.g., user just loaded the page)
+                if (firebaseError.code !== 'auth/no-user-for-credential') {
+                    toast({ variant: 'destructive', title: "Google Login Failed", description: firebaseError.message });
+                }
+            } finally {
+                setGoogleLoading(false); // Finished checking
             }
         };
         checkRedirect();
@@ -98,9 +105,10 @@ export default function LoginPage() {
     const handleGoogleLogin = async () => {
         setGoogleLoading(true);
         try {
-            await loginWithGoogle();
+            // This function just starts the redirect, no need to await anything here.
+            loginWithGoogle();
         } catch (error) {
-            console.error("Google Login failed:", error);
+            console.error("Google Login failed to initiate:", error);
             const firebaseError = error as FirebaseError;
             toast({ variant: 'destructive', title: "Google Login Failed", description: firebaseError.message });
             setGoogleLoading(false);
@@ -129,7 +137,7 @@ export default function LoginPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <Button variant="outline" className="w-full" onClick={handleGoogleLogin} type="button" disabled={googleLoading}>
-                    {googleLoading ? 'Redirecting to Google...' : <><GoogleIcon /> Sign in with Google</>}
+                    {googleLoading ? 'Redirecting...' : <><GoogleIcon /> Sign in with Google</>}
                 </Button>
                 <div className="flex items-center gap-4">
                     <Separator className="flex-1" />

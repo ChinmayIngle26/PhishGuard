@@ -31,8 +31,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setHasMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
+      setLoading(true); // Start loading when auth state changes
       if (user) {
+        setUser(user);
         // Try to fetch existing reputation data.
         const userRep = await getUserReputation(user.uid);
         if (userRep) {
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } else {
+        setUser(null);
         setReputation(null);
       }
       setLoading(false);
@@ -63,9 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
   
   const signup = async (credential: any) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, credential.email, credential.password);
-    // The onAuthStateChanged listener will handle reputation creation.
-    return userCredential;
+    return createUserWithEmailAndPassword(auth, credential.email, credential.password);
   }
 
   const loginWithGoogle = async () => {
@@ -74,22 +74,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const getGoogleRedirectResult = async () => {
-    try {
-        const result = await getRedirectResult(auth);
-        // The onAuthStateChanged listener will handle reputation creation for new Google users.
-        return result;
-    } catch (error) {
-        console.error("Google Redirect Result Error:", error);
-        // Don't throw here, as it can break the login flow for existing users.
-        // The onAuthStateChanged listener will handle reputation fetching/creation.
-        return null;
-    }
+    return getRedirectResult(auth);
   }
 
   const logout = async () => {
     try {
       await signOut(auth);
-      setReputation(null);
+      // State will be cleared by onAuthStateChanged listener
     } catch (error) {
       console.error("Error during sign-out:", error);
     }
@@ -97,12 +88,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Render a skeleton loading UI only on the client-side after mounting,
   // and while auth state is still loading.
-  if (loading && hasMounted) {
+  if (!hasMounted || loading) {
     return (
         <div className="flex flex-col min-h-screen">
             <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="container flex h-16 items-center justify-end">
-                    <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="container flex h-16 items-center">
+                   <div className="mr-4 hidden md:flex">
+                        <Skeleton className="h-8 w-32" />
+                    </div>
+                    <div className="flex flex-1 items-center justify-end space-x-2">
+                        <Skeleton className="h-10 w-10 rounded-full" />
+                    </div>
                 </div>
             </header>
             <main className="flex-grow container mx-auto p-4">
