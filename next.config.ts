@@ -1,6 +1,9 @@
+
 import type {NextConfig} from 'next';
+import { initializeFirebaseAdmin } from './src/lib/firebase-admin';
 
 require('dotenv').config({ path: './.env' });
+initializeFirebaseAdmin();
 
 const nextConfig: NextConfig = {
   /* config options here */
