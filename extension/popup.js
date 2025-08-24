@@ -1,8 +1,9 @@
+
 const urlInput = document.getElementById('urlInput');
 const scanButton = document.getElementById('scanButton');
 const resultDiv = document.getElementById('result');
 
-const API_URL = 'https://YOUR_VERCEL_URL/api/scan'; // This will need to be your deployed app's URL later
+const API_URL = 'https://YOUR_VERCEL_URL/api/scan'; 
 
 // Get current tab's URL and set it in the input
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
