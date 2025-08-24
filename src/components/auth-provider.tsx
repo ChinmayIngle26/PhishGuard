@@ -31,14 +31,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
+        // Try to fetch existing reputation data.
         const userRep = await getUserReputation(user.uid);
         if (userRep) {
           setReputation(userRep);
         } else {
-            // This can happen if the user was created before the reputation system was in place.
+          // If no reputation data exists, it's likely a new user.
+          // Create their reputation profile.
+          try {
             await createUserReputation(user.uid, user.email);
             const newUserRep = await getUserReputation(user.uid);
             setReputation(newUserRep);
+          } catch (error) {
+              console.error("Failed to create user reputation profile:", error);
+              // Set reputation to a default state if creation fails
+              setReputation({ uid: user.uid, email: user.email, guardPoints: 0, feedbackCount: 0 });
+          }
         }
       } else {
         setReputation(null);
@@ -66,12 +74,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const getGoogleRedirectResult = async () => {
-    const result = await getRedirectResult(auth);
-    if (result?.user) {
-        // This is a good place to ensure a reputation profile exists for Google users.
-        await createUserReputation(result.user.uid, result.user.email);
+    try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+            // Ensure a reputation profile exists for new Google users.
+            const userRep = await getUserReputation(result.user.uid);
+            if (!userRep) {
+                await createUserReputation(result.user.uid, result.user.email);
+            }
+        }
+        return result;
+    } catch (error) {
+        console.error("Google Redirect Result Error:", error);
+        // Don't throw here, as it can break the login flow for existing users.
+        // The onAuthStateChanged listener will handle reputation fetching/creation.
+        return null;
     }
-    return result;
   }
 
   const logout = async () => {
@@ -86,13 +104,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
         <div className="flex flex-col min-h-screen">
-            <header className="flex items-center justify-between p-4 border-b">
-                <Skeleton className="h-10 w-40" />
-                <Skeleton className="h-10 w-24 rounded-md" />
+            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <div className="container flex h-16 items-center justify-between">
+                    <Skeleton className="h-10 w-40" />
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                </div>
             </header>
             <main className="flex-grow container mx-auto p-4">
-                <div className="flex flex-col items-center gap-4">
-                    <Skeleton className="h-32 w-full max-w-2xl" />
+                <div className="flex flex-col items-center gap-8 pt-12">
+                    <Skeleton className="h-48 w-full max-w-2xl" />
                     <Skeleton className="h-64 w-full max-w-2xl" />
                 </div>
             </main>
