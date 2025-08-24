@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import type { AnalyzeEmailOutput } from '@/ai/flows/analyze-email-flow';
-import { Loader2, ShieldAlert, ShieldX, Bot, Quote, AlertTriangle } from 'lucide-react';
+import { Loader2, ShieldAlert, ShieldX, Bot, Quote, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';

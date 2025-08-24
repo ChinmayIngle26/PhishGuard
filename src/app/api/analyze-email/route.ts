@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const isRateLimitError = error.status === 429;
     
     return NextResponse.json({ 
-        error: isRateLimitError ? 'API rate limit exceeded. Please try again later.' : 'Internal Server Error' 
+        error: isRateLimitError ? 'API rate limit exceeded. Please try again later.' : (error.message || 'Internal Server Error')
     }, { 
         status: isRateLimitError ? 429 : 500 
     });
