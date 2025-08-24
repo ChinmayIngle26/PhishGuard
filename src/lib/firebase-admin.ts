@@ -6,19 +6,24 @@ export const adminInstance = admin;
 
 /**
  * Initializes the Firebase Admin SDK if it hasn't been already.
- * This function is designed to be called before any Firebase Admin services are used.
+ * This function is designed to be called once when the server starts.
  * It uses a Base64 encoded service account for robustness.
  */
 export function initializeFirebaseAdmin() {
   if (admin.apps.length > 0) {
+    console.log('Firebase Admin SDK already initialized.');
     return; // Already initialized
   }
 
+  console.log('Attempting to initialize Firebase Admin SDK...');
   const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
 
   if (!serviceAccountBase64) {
+    console.error(
+      'Firebase Admin initialization failed: The FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is missing. Please add it to your .env file.'
+    );
     throw new Error(
-      'Firebase Admin initialization failed. The FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is missing. Please add it to your .env file for local development or to your Vercel/hosting provider environment variables for production.'
+      'Firebase Admin initialization failed. The FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is missing.'
     );
   }
 
@@ -36,20 +41,29 @@ export function initializeFirebaseAdmin() {
 
     console.log('Firebase Admin SDK initialized successfully.');
   } catch (error: any) {
-    // Provide a more detailed error message to help diagnose the issue.
-    throw new Error(
+    console.error(
       `Firebase Admin initialization failed with a credential parsing error: ${error.message}. Please ensure the FIREBASE_SERVICE_ACCOUNT_BASE64 value is a valid, non-corrupted Base64 string from your service account JSON file.`
     );
+    // Re-throw the error to prevent the application from running with a misconfigured Firebase Admin.
+    throw new Error(`Firebase Admin initialization failed: ${error.message}`);
   }
 }
 
+// Immediately attempt to initialize on module load for server environments.
+initializeFirebaseAdmin();
+
 // Export the initialized services as getters to ensure initialization has occurred.
 export const adminDb = () => {
-  initializeFirebaseAdmin();
+  if (admin.apps.length === 0) {
+    // This case should ideally not be hit if initialization is handled correctly on startup.
+    initializeFirebaseAdmin();
+  }
   return admin.firestore();
 };
 
 export const adminAuth = () => {
-  initializeFirebaseAdmin();
+  if (admin.apps.length === 0) {
+    initializeFirebaseAdmin();
+  }
   return admin.auth();
 };
