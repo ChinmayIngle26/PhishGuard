@@ -52,7 +52,7 @@ const prompt = ai.definePrompt({
   name: 'analyzeEmailPrompt',
   input: {schema: AnalyzeEmailInputSchema},
   output: {schema: AnalyzeEmailOutputSchema},
-  model: ai.model('googleai/gemini-2.0-flash'),
+  model: 'googleai/gemini-2.0-flash',
   prompt: `You are an expert cybersecurity AI specializing in detecting phishing and social engineering in email communications.
 Your task is to analyze the provided email content and identify any manipulative tactics being used.
 
