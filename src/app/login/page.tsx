@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { FirebaseError } from "firebase/app";
 import { PhishGuardLogo } from "@/components/phishguard-logo";
 import { Separator } from "@/components/ui/separator";
+import { createUserReputation } from "@/services/reputation";
 
 function GoogleIcon() {
     return (
@@ -51,8 +52,8 @@ export default function LoginPage() {
             setGoogleLoading(true); // Assume a redirect might be in progress
             try {
                 const result = await getGoogleRedirectResult();
-                if (result) {
-                    // AuthProvider's onAuthStateChanged will handle profile creation
+                if (result && result.user) {
+                    await createUserReputation(result.user.uid, result.user.email);
                     toast({ title: "Login Successful", description: "Welcome!" });
                     router.push('/');
                 }
@@ -60,7 +61,7 @@ export default function LoginPage() {
                 console.error("Google Login failed after redirect:", error);
                 const firebaseError = error as FirebaseError;
                 // Avoid showing an error if there was no redirect attempt (e.g., user just loaded the page)
-                if (firebaseError.code !== 'auth/no-user-for-credential') {
+                if (firebaseError.code !== 'auth/no-user-for-credential' && firebaseError.code !== 'auth/credential-already-in-use') {
                     toast({ variant: 'destructive', title: "Google Login Failed", description: firebaseError.message });
                 }
             } finally {
@@ -90,7 +91,10 @@ export default function LoginPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            await signup({ email: signupEmail, password: signupPassword });
+            const userCredential = await signup({ email: signupEmail, password: signupPassword });
+            if (userCredential && userCredential.user) {
+                await createUserReputation(userCredential.user.uid, userCredential.user.email);
+            }
             toast({ title: "Signup Successful", description: "Welcome to PhishGuard!" });
             router.push('/');
         } catch (error) {
@@ -106,7 +110,7 @@ export default function LoginPage() {
         setGoogleLoading(true);
         try {
             // This function just starts the redirect, no need to await anything here.
-            loginWithGoogle();
+            await loginWithGoogle();
         } catch (error) {
             console.error("Google Login failed to initiate:", error);
             const firebaseError = error as FirebaseError;
