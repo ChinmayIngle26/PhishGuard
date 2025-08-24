@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import type { AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
-import { ShieldCheck, ShieldAlert, ShieldX, ThumbsUp, ThumbsDown, Loader2, Link as LinkIcon, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ShieldX, ThumbsUp, ThumbsDown, Loader2, Link as LinkIcon, CheckCircle2, Building } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -86,7 +86,7 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected }: { feedback
 }
 
 function ResultCard({ result }: { result: ScanResultWithUrl }) {
-    const { riskLevel, reason, url } = result;
+    const { riskLevel, reason, url, impersonatedBrand, recommendation } = result;
     const { user } = useAuth();
     const { toast } = useToast();
     const [feedbackState, feedbackAction, isFeedbackPending] = useActionState(submitFeedbackAction, initialFeedbackState);
@@ -100,9 +100,11 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
             });
             // Track the last successful feedback
-            const formData = new FormData(formRef.current!);
-            const type = formData.get('feedbackType') as 'good' | 'bad';
-            setLastFeedback(type);
+            if (formRef.current) {
+                const formData = new FormData(formRef.current);
+                const type = formData.get('feedbackType') as 'good' | 'bad';
+                setLastFeedback(type);
+            }
         }
         if (feedbackState.error) {
             toast({
@@ -173,9 +175,21 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                     <Progress value={riskLevel} className={cn('h-2', progressClass)} />
                 </div>
 
+                {impersonatedBrand && (
+                    <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2"><Building className="h-4 w-4" /> Impersonated Brand</h4>
+                        <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md border">{impersonatedBrand}</p>
+                    </div>
+                )}
+
                 <div>
                     <h4 className="font-semibold mb-2">AI Analysis</h4>
-                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md border">{reason}</p>
+                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md border whitespace-pre-wrap">{reason}</p>
+                </div>
+
+                 <div>
+                    <h4 className="font-semibold mb-2">Recommendation</h4>
+                    <p className={cn("text-sm font-semibold p-3 rounded-md border", badgeClass)}>{recommendation}</p>
                 </div>
 
                 <div className="pt-4 border-t">

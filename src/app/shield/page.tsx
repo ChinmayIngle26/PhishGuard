@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { analyzeUrl, AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, ShieldX, Loader2, ArrowLeft } from 'lucide-react';
+import { ShieldAlert, ShieldX, Loader2, ArrowLeft, Building } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -15,7 +15,7 @@ import { PhishGuardLogo } from '@/components/phishguard-logo';
 type ScanResultWithUrl = AnalyzeUrlOutput & { url: string };
 
 function ResultCard({ result, onProceed }: { result: ScanResultWithUrl; onProceed: () => void }) {
-    const { riskLevel, reason, url } = result;
+    const { riskLevel, reason, url, impersonatedBrand, recommendation } = result;
 
     let status: 'Suspicious' | 'Dangerous';
     let colorClass: string;
@@ -64,10 +64,22 @@ function ResultCard({ result, onProceed }: { result: ScanResultWithUrl; onProcee
                     </div>
                     <Progress value={riskLevel} className={cn('h-2', progressClass)} />
                 </div>
+                
+                {impersonatedBrand && (
+                    <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2"><Building className="h-4 w-4" /> Impersonated Brand</h4>
+                        <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md border">{impersonatedBrand}</p>
+                    </div>
+                )}
 
                 <div>
                     <h4 className="font-semibold mb-2">AI Analysis</h4>
-                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md border">{reason}</p>
+                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md border whitespace-pre-wrap">{reason}</p>
+                </div>
+
+                <div>
+                    <h4 className="font-semibold mb-2">Recommendation</h4>
+                    <p className={cn("text-sm font-semibold p-3 rounded-md border", badgeClass)}>{recommendation}</p>
                 </div>
 
                  <div className="pt-4 border-t text-center">
