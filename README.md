@@ -84,6 +84,21 @@ You should now be able to access the application at `http://localhost:9002`.
 
 ---
 
+## Deployment to Vercel
+
+### Environment Variables
+
+When you deploy your application to a hosting provider like Vercel, you must add your environment variables to the project settings on their platform. The `.env` file is only for local development and is not uploaded.
+
+**IMPORTANT:** The AI scanning features will fail if the `GEMINI_API_KEY` is not set in your Vercel project's environment variables.
+
+1.  Go to your project's dashboard on Vercel.
+2.  Navigate to **Settings** > **Environment Variables**.
+3.  Add all the variables from your `.env` file (`NEXT_PUBLIC_FIREBASE_...` and `GEMINI_API_KEY`).
+4.  Redeploy your application for the changes to take effect.
+
+---
+
 ## Using the Browser Extension
 
 The `/extension` directory contains the files for the browser extension.
@@ -95,4 +110,13 @@ The `/extension` directory contains the files for the browser extension.
 3.  Click the **Load unpacked** button.
 4.  Select the `extension` folder from this project's directory.
 
-The PhishGuard icon should now appear in your browser's toolbar. For the extension to work, the local development server must be running.
+The PhishGuard icon should now appear in your browser's toolbar.
+
+### Connecting the Extension to your Deployed App
+
+**IMPORTANT:** For the extension to work with your deployed Vercel application, you must update the API URLs in the extension's files.
+
+1.  Open `extension/popup.js`.
+2.  Open `extension/background.js`.
+3.  In both files, replace the placeholder `https://YOUR_VERCEL_URL` with your actual Vercel deployment URL.
+4.  After saving the files, go back to `chrome://extensions` and click the "Reload" button for the PhishGuard extension.
