@@ -86,24 +86,22 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { toast } = useToast();
     const [feedbackState, feedbackAction, isFeedbackPending] = useActionState(submitFeedbackAction, initialFeedbackState);
     const formRef = useRef<HTMLFormElement>(null);
-    const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
     
     useEffect(() => {
-        if (feedbackState.success && !feedbackSubmitted) {
+        if (feedbackState.success) {
             toast({
                 title: "Feedback Submitted",
                 description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
             });
-            setFeedbackSubmitted(true);
         }
-        if (feedbackState.error && !feedbackSubmitted) {
+        if (feedbackState.error) {
             toast({
                 variant: 'destructive',
                 title: "Feedback Failed",
                 description: feedbackState.error,
             });
         }
-    }, [feedbackState, toast, feedbackSubmitted]);
+    }, [feedbackState, toast]);
 
     let status: 'Safe' | 'Low Risk' | 'Suspicious' | 'Dangerous';
     let colorClass: string;
@@ -171,7 +169,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 </div>
 
                 <div className="pt-4 border-t">
-                    {feedbackSubmitted ? (
+                    {feedbackState.success ? (
                         <p className="text-sm text-center text-muted-foreground">Thank you for your feedback!</p>
                     ) : (
                         <>
