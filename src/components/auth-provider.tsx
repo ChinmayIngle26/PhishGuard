@@ -5,7 +5,6 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { onAuthStateChanged, signOut, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { createUserReputation } from '@/services/reputation';
-import { getUserReputationAction } from '@/app/actions';
 import type { UserReputation } from '@/services/reputation';
 
 interface AuthContextType {
@@ -29,7 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchReputation = useCallback(async (uid: string) => {
     try {
-      const result = await getUserReputationAction(uid);
+      const response = await fetch('/api/get-reputation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid }),
+      });
+      const result = await response.json();
+
       if (result.success && result.data) {
         setReputation(result.data);
       } else if (result.error) {
