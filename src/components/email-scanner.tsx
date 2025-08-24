@@ -1,9 +1,7 @@
 
 'use client';
 
-import { useFormStatus } from 'react-dom';
-import { useActionState, useEffect, useRef } from 'react';
-import { scanEmailAction } from '@/app/actions';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -14,28 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-
-const initialScanState = {
-  success: false,
-  data: null,
-  error: null,
-};
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Analyzing Email...
-        </>
-      ) : (
-        'Analyze Email'
-      )}
-    </Button>
-  );
-}
 
 function ResultCard({ result }: { result: AnalyzeEmailOutput }) {
     const { overallRiskLevel, overallRecommendation, detectedTactics } = result;
@@ -61,7 +37,7 @@ function ResultCard({ result }: { result: AnalyzeEmailOutput }) {
     } else {
         status = 'Likely Safe';
         colorClass = 'text-green-600';
-        Icon = ShieldAlert;
+        Icon = ShieldCheck;
         progressClass = '[&>div]:bg-green-600';
         badgeClass = 'border-green-600/50 bg-green-600/10 text-green-600';
     }
@@ -126,19 +102,60 @@ function ResultCard({ result }: { result: AnalyzeEmailOutput }) {
 
 
 export function EmailScanner() {
-  const [scanState, formAction] = useActionState(scanEmailAction, initialScanState);
+  const [result, setResult] = useState<AnalyzeEmailOutput | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   
   useEffect(() => {
-    if (scanState.error) {
+    if (error) {
       toast({
         variant: 'destructive',
         title: 'Analysis Failed',
-        description: scanState.error,
+        description: error,
       });
     }
-  }, [scanState, toast]);
+  }, [error, toast]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    setResult(null);
+
+    const formData = new FormData(event.currentTarget);
+    const emailContent = formData.get('emailContent') as string;
+    
+    if (emailContent.length < 50) {
+        setError('Email content must be at least 50 characters long.');
+        setPending(false);
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/analyze-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ emailContent }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'An unexpected error occurred.');
+        }
+
+        setResult(data);
+
+    } catch (err: any) {
+        const errorMessage = err.message || 'An unexpected error occurred. Please try again later.';
+        setError(errorMessage);
+    } finally {
+        setPending(false);
+    }
+  }
+
 
   return (
     <div className="w-full flex flex-col items-center gap-8">
@@ -148,7 +165,7 @@ export function EmailScanner() {
           <CardDescription>Paste the full content of a suspicious email to analyze it for phishing and social engineering tactics.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form ref={formRef} action={formAction} className="space-y-4">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
              <Textarea
                 name="emailContent"
                 placeholder="Paste email content here..."
@@ -156,13 +173,22 @@ export function EmailScanner() {
                 className="min-h-[200px] text-sm"
               />
             <div className="flex justify-end">
-               <SubmitButton />
+               <Button type="submit" disabled={pending} className="w-full sm:w-auto">
+                    {pending ? (
+                        <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Analyzing Email...
+                        </>
+                    ) : (
+                        'Analyze Email'
+                    )}
+                </Button>
             </div>
           </form>
         </CardContent>
       </Card>
       
-      {scanState.success && scanState.data && <ResultCard result={scanState.data} />}
+      {result && <ResultCard result={result} />}
     </div>
   );
 }

@@ -3,7 +3,6 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { analyzeUrl, AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShieldAlert, ShieldX, Loader2, ArrowLeft, Building } from 'lucide-react';
@@ -11,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { PhishGuardLogo } from '@/components/phishguard-logo';
+import type { AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
 
 type ScanResultWithUrl = AnalyzeUrlOutput & { url: string };
 
@@ -106,16 +106,21 @@ function LoadingState() {
     )
 }
 
-function InvalidUrlState() {
-     const router = useRouter();
+function ErrorState({ message, onRetry }: { message: string, onRetry: () => void }) {
+    const router = useRouter();
     return (
          <div className="flex flex-col items-center gap-4 text-center">
             <ShieldX className="h-12 w-12 text-destructive" />
-            <h2 className="text-2xl font-semibold">Invalid URL</h2>
-            <p className="text-muted-foreground max-w-md">The URL provided is not valid. Please go back and try again.</p>
-            <Button variant="outline" onClick={() => router.back()}>
-                <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
-            </Button>
+            <h2 className="text-2xl font-semibold">Scan Failed</h2>
+            <p className="text-muted-foreground max-w-md">{message}</p>
+            <div className='flex gap-2 mt-4'>
+                <Button variant="outline" onClick={() => router.back()}>
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+                </Button>
+                 <Button onClick={onRetry}>
+                    Retry Scan
+                </Button>
+            </div>
         </div>
     )
 }
@@ -129,7 +134,7 @@ export default function ShieldPage() {
     
     const urlToScan = searchParams.get('url');
 
-    useEffect(() => {
+    const runScan = async () => {
         if (!urlToScan || !urlToScan.startsWith('http')) {
             setIsLoading(false);
             setError("Invalid URL provided.");
@@ -137,23 +142,35 @@ export default function ShieldPage() {
         }
 
         setIsLoading(true);
-        analyzeUrl({ url: urlToScan })
-            .then(data => {
-                setResult({ ...data, url: urlToScan });
-            })
-            .catch(err => {
-                console.error("Scan failed:", err);
-                setError("Failed to analyze the URL.");
-            })
-            .finally(() => {
-                setIsLoading(false);
+        setError(null);
+        setResult(null);
+
+        try {
+            const response = await fetch('/api/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: urlToScan }),
             });
 
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'An unexpected error occurred.');
+            }
+            setResult({ ...data, url: urlToScan });
+        } catch (err: any) {
+            console.error("Scan failed:", err);
+            setError(err.message || 'Failed to analyze the URL.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        runScan();
     }, [urlToScan]);
 
     const handleProceed = () => {
         if(urlToScan) {
-            // Disable the shield for this specific navigation
             const shieldedUrl = new URL(urlToScan);
             shieldedUrl.searchParams.set('phishguard-override', 'true');
             window.location.href = shieldedUrl.toString();
@@ -167,7 +184,7 @@ export default function ShieldPage() {
         </header>
 
         {isLoading && <LoadingState />}
-        {error && <InvalidUrlState />}
+        {error && <ErrorState message={error} onRetry={runScan} />}
         {result && <ResultCard result={result} onProceed={handleProceed} />}
       
         <footer className="mt-12 text-center text-sm text-muted-foreground">
