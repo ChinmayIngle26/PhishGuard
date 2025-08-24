@@ -71,7 +71,7 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected }: { feedback
             onClick={handleClick}
             className={cn({'bg-accent text-accent-foreground': hasBeenSelected})}
         >
-            {isPending ? (
+            {isPending && hasBeenSelected ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
             ) : (
                 hasBeenSelected ? (
@@ -101,9 +101,13 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
             });
             // Track the last successful feedback
             if (formRef.current) {
+                 // The `pending` prop from `useActionState` is not sufficient here as we need the button name.
+                 // We get the submitted feedback type from the form data.
                 const formData = new FormData(formRef.current);
-                const type = formData.get('feedbackType') as 'good' | 'bad';
-                setLastFeedback(type);
+                const feedbackType = (document.activeElement as HTMLButtonElement)?.value as 'good' | 'bad' | undefined;
+                if(feedbackType) {
+                    setLastFeedback(feedbackType);
+                }
             }
         }
         if (feedbackState.error) {
@@ -176,7 +180,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 </div>
 
                 {impersonatedBrand && (
-                    <div>
+                     <div>
                         <h4 className="font-semibold mb-2 flex items-center gap-2"><Building className="h-4 w-4" /> Impersonated Brand</h4>
                         <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md border">{impersonatedBrand}</p>
                     </div>
@@ -197,11 +201,12 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                         <p className="text-sm text-muted-foreground">Was this result helpful?</p>
                         <form action={feedbackAction} ref={formRef} className="flex items-center gap-2">
                             {user && <input type="hidden" name="userId" value={user.uid} />}
+                            <input type="hidden" name="url" value={url} />
                             <FeedbackButton feedbackType="good" isPending={isFeedbackPending} hasBeenSelected={lastFeedback === 'good'} />
                             <FeedbackButton feedbackType="bad" isPending={isFeedbackPending} hasBeenSelected={lastFeedback === 'bad'} />
                         </form>
                     </div>
-                    { lastFeedback && (
+                     {lastFeedback && (
                         <p className="text-xs text-center text-muted-foreground mt-3 animate-in fade-in-0">
                             Thank you for your feedback!
                         </p>
@@ -234,7 +239,7 @@ export function UrlScanner() {
   }, [scanState, toast]);
 
   return (
-    <div className="w-full flex flex-col items-center gap-8 px-4">
+    <div className="w-full flex flex-col items-center gap-8">
       <Card className="w-full max-w-2xl shadow-lg">
         <CardHeader>
           <CardTitle>AI-Powered URL Scanner</CardTitle>

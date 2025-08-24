@@ -1,7 +1,11 @@
+
 'use server';
 
 import { analyzeUrl } from '@/ai/flows/enhance-detection-accuracy';
+import { addThreat } from '@/services/threats';
 import { NextRequest, NextResponse } from 'next/server';
+
+const DANGEROUS_RISK_THRESHOLD = 75;
 
 const getCorsHeaders = () => {
     return new Headers({
@@ -27,6 +31,17 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await analyzeUrl({ url });
+
+    // If the URL is dangerous, add it to the threat feed
+    if (result.riskLevel >= DANGEROUS_RISK_THRESHOLD) {
+      await addThreat({
+        url: url,
+        riskLevel: result.riskLevel,
+        reason: result.reason,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     return NextResponse.json(result, { headers: getCorsHeaders() });
   } catch (error) {
     console.error('API Error:', error);
