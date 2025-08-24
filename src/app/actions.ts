@@ -48,14 +48,12 @@ export async function scanUrlAction(prevState: ScanState, formData: FormData): P
 
 const FeedbackSchema = z.object({
     userId: z.string().min(1, { message: 'User ID is required.' }),
-    userEmail: z.string().email().nullable(),
     feedbackType: z.enum(['good', 'bad']),
 });
 
 export async function submitFeedbackAction(prevState: any, formData: FormData): Promise<{ success: boolean; error?: string }> {
     const validatedFields = FeedbackSchema.safeParse({
         userId: formData.get('userId'),
-        userEmail: formData.get('userEmail'),
         feedbackType: formData.get('feedbackType'),
     });
     
@@ -64,14 +62,10 @@ export async function submitFeedbackAction(prevState: any, formData: FormData): 
     }
 
     try {
-        const { userId, userEmail, feedbackType } = validatedFields.data;
-        const userRep = await getUserReputation(userId);
-
-        // If user reputation doesn't exist, create it.
-        if (!userRep) {
-            await createUserReputation(userId, userEmail);
-        }
-
+        const { userId, feedbackType } = validatedFields.data;
+        // The user reputation should exist by this point, created on login/signup.
+        // If it doesn't, let it fail so we can identify the root cause,
+        // but the primary fix is on the login page.
         await addReputationPoints(userId, feedbackType);
         return { success: true };
     } catch (error) {
