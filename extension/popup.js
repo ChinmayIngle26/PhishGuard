@@ -3,7 +3,23 @@ const urlInput = document.getElementById('urlInput');
 const scanButton = document.getElementById('scanButton');
 const resultDiv = document.getElementById('result');
 
-const API_URL = 'https://phishguard-testapp.vercel.app/api/scan'; 
+const DEFAULT_APP_URL = 'https://phishguard-testapp.vercel.app';
+let API_URL = `${DEFAULT_APP_URL}/api/scan`;
+
+// Load the saved URL from storage and update the API_URL
+chrome.storage.sync.get('appUrl', (data) => {
+    if (data.appUrl) {
+        API_URL = `${data.appUrl}/api/scan`;
+    }
+});
+
+// Listen for changes to the URL in storage
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'sync' && changes.appUrl) {
+        API_URL = `${changes.appUrl.newValue}/api/scan`;
+    }
+});
+
 
 // Get current tab's URL and set it in the input
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
