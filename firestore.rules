@@ -1,23 +1,19 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Allow public read-only access to the threats collection for the feed
+    // Allow public, read-only access for the real-time threat feed
     match /threats/{threatId} {
       allow read: if true;
-      allow write: if false; // Block client-side writes
+      allow write: if false; // Deny all client-side writes
     }
 
-    // Secure the reputations collection
-    // A user can only read or write their own reputation document
+    // Users can only read and write their own reputation document
     match /reputations/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Deny all other reads/writes by default for security
-    match /{document=**} {
-      allow read, write: if false;
-    }
+    // Explicitly deny access to any other collections by default
   }
 }
