@@ -5,13 +5,26 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import type { AnalyzeEmailOutput } from '@/ai/flows/analyze-email-flow';
 import { Loader2, ShieldAlert, ShieldX, Bot, Quote, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+
+// Re-define the type here to avoid importing from the server-only flow file.
+type EmailTactic = {
+    tactic: "Urgency or Scarcity" | "Threats or Consequences" | "Suspicious Attachments" | "Impersonation" | "Generic Salutation" | "Grammar and Spelling Errors" | "Unusual Sender Address" | "Request for Sensitive Information" | "Unexpected Prize or Offer";
+    explanation: string;
+    quote: string;
+};
+
+type AnalyzeEmailOutput = {
+    overallRiskLevel: number;
+    overallRecommendation: string;
+    detectedTactics: EmailTactic[];
+};
+
 
 function ResultCard({ result }: { result: AnalyzeEmailOutput }) {
     const { overallRiskLevel, overallRecommendation, detectedTactics } = result;

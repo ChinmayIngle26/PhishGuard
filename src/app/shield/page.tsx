@@ -10,7 +10,14 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { PhishGuardLogo } from '@/components/phishguard-logo';
-import type { AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
+
+// Re-define the type here to avoid importing from the server-only flow file.
+type AnalyzeUrlOutput = {
+    riskLevel: number;
+    reason: string;
+    impersonatedBrand?: string;
+    recommendation: string;
+};
 
 type ScanResultWithUrl = AnalyzeUrlOutput & { url: string };
 

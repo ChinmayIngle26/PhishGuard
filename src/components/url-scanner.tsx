@@ -8,13 +8,20 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import type { AnalyzeUrlOutput } from '@/ai/flows/enhance-detection-accuracy';
 import { ShieldCheck, ShieldAlert, ShieldX, ThumbsUp, ThumbsDown, Loader2, Link as LinkIcon, CheckCircle2, Building } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from './auth-provider';
 import Link from 'next/link';
+
+// Re-define the type here to avoid importing from the server-only flow file.
+type AnalyzeUrlOutput = {
+    riskLevel: number;
+    reason: string;
+    impersonatedBrand?: string;
+    recommendation: string;
+};
 
 type ScanResultWithUrl = AnalyzeUrlOutput & { url: string };
 
@@ -23,13 +30,14 @@ const initialFeedbackState = {
     error: undefined,
 }
 
-function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction, formRef }: { feedbackType: 'good' | 'bad', isPending: boolean, hasBeenSelected: boolean, formAction: (payload: FormData) => void, formRef: React.RefObject<HTMLFormElement> }) {
+function FeedbackButton({ feedbackType, isPending, hasBeenSelected }: { feedbackType: 'good' | 'bad', isPending: boolean, hasBeenSelected: boolean }) {
     const { user } = useAuth();
     const { toast } = useToast();
 
     const handleClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         if (!user) {
             e.preventDefault();
+            (e.currentTarget.form as HTMLFormElement).requestSubmit();
             toast({
                 title: "Login Required",
                 description: "Please log in to provide feedback and earn rewards.",
@@ -39,52 +47,54 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction, 
     }
 
     return (
-        <form ref={formRef} action={formAction} className="flex items-center gap-2">
-            {user && <input type="hidden" name="userId" value={user.uid} />}
-            <input type="hidden" name="feedbackType" value={feedbackType} />
-            <Button 
-                type="submit" 
-                variant="outline" 
-                size="sm" 
-                disabled={isPending}
-                onClick={handleClick}
-                className={cn({'bg-accent text-accent-foreground': hasBeenSelected})}
-            >
-                {isPending && hasBeenSelected ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+        <Button 
+            type="submit" 
+            variant="outline" 
+            size="sm" 
+            name="feedbackType"
+            value={feedbackType}
+            disabled={isPending}
+            onClick={handleClick}
+            className={cn({'bg-accent text-accent-foreground': hasBeenSelected})}
+        >
+            {isPending && hasBeenSelected ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+            ) : (
+                hasBeenSelected ? (
+                    <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
                 ) : (
-                    hasBeenSelected ? (
-                        <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
-                    ) : (
-                        feedbackType === 'good' ? <ThumbsUp className="mr-2 h-4 w-4" /> : <ThumbsDown className="mr-2 h-4 w-4" />
-                    )
-                )}
-                {feedbackType === 'good' ? 'Yes' : 'No'}
-            </Button>
-        </form>
+                    feedbackType === 'good' ? <ThumbsUp className="mr-2 h-4 w-4" /> : <ThumbsDown className="mr-2 h-4 w-4" />
+                )
+            )}
+            {feedbackType === 'good' ? 'Yes' : 'No'}
+        </Button>
     )
 }
 
 function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { riskLevel, reason, url, impersonatedBrand, recommendation } = result;
+    const { user } = useAuth();
     const { toast } = useToast();
     const [feedbackState, feedbackAction, isFeedbackPending] = useActionState(submitFeedbackAction, initialFeedbackState);
     const [submittedFeedback, setSubmittedFeedback] = useState<'good' | 'bad' | null>(null);
-    const goodFormRef = useRef<HTMLFormElement>(null);
-    const badFormRef = useRef<HTMLFormElement>(null);
+    const lastSubmittedFeedbackType = useRef<'good' | 'bad' | null>(null);
 
+    const handleFormAction = (formData: FormData) => {
+        const type = formData.get('feedbackType') as 'good' | 'bad';
+        lastSubmittedFeedbackType.current = type;
+        setSubmittedFeedback(type);
+        feedbackAction(formData);
+    }
+    
     useEffect(() => {
         if (feedbackState.success) {
+             if (lastSubmittedFeedbackType.current) {
+                setSubmittedFeedback(lastSubmittedFeedbackType.current);
+            }
             toast({
                 title: "Feedback Submitted",
                 description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
             });
-            // This is a hack to know which button was clicked without a lot of state.
-            if (goodFormRef.current?.querySelector('button:disabled')) {
-                setSubmittedFeedback('good');
-            } else if (badFormRef.current?.querySelector('button:disabled')) {
-                setSubmittedFeedback('bad');
-            }
         }
         if (feedbackState.error) {
             toast({
@@ -92,6 +102,7 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 title: "Feedback Failed",
                 description: feedbackState.error,
             });
+            setSubmittedFeedback(null); // Reset on error
         }
     }, [feedbackState, toast]);
 
@@ -173,18 +184,21 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 </div>
 
                 <div className="pt-4 border-t">
-                     <div className="flex justify-center items-center gap-4">
-                        <p className="text-sm text-muted-foreground">Was this result helpful?</p>
-                        <div className="flex items-center gap-2">
-                            <FeedbackButton formRef={goodFormRef} feedbackType="good" isPending={isFeedbackPending && submittedFeedback !== 'bad'} hasBeenSelected={submittedFeedback === 'good'} formAction={feedbackAction} />
-                            <FeedbackButton formRef={badFormRef} feedbackType="bad" isPending={isFeedbackPending && submittedFeedback !== 'good'} hasBeenSelected={submittedFeedback === 'bad'} formAction={feedbackAction} />
+                    <form action={handleFormAction} className="space-y-3">
+                        <div className="flex justify-center items-center gap-4">
+                            <p className="text-sm text-muted-foreground">Was this result helpful?</p>
+                             {user && <input type="hidden" name="userId" value={user.uid} />}
+                            <div className="flex items-center gap-2">
+                                <FeedbackButton feedbackType="good" isPending={isFeedbackPending && submittedFeedback === 'good'} hasBeenSelected={submittedFeedback === 'good'} />
+                                <FeedbackButton feedbackType="bad" isPending={isFeedbackPending && submittedFeedback === 'bad'} hasBeenSelected={submittedFeedback === 'bad'} />
+                            </div>
                         </div>
-                    </div>
-                     {submittedFeedback && (
-                        <p className="text-xs text-center text-muted-foreground mt-3 animate-in fade-in-0">
-                            Thank you for your feedback!
-                        </p>
-                    )}
+                        {feedbackState.success && (
+                            <p className="text-xs text-center text-muted-foreground mt-3 animate-in fade-in-0">
+                                Thank you for your feedback!
+                            </p>
+                        )}
+                    </form>
                 </div>
             </CardContent>
         </Card>
