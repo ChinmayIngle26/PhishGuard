@@ -5,11 +5,12 @@ let app: admin.app.App;
 
 /**
  * Initializes the Firebase Admin SDK if it hasn't been already.
- * This function is idempotent (safe to call multiple times) and is called
- * automatically when the module is first loaded.
+ * This function is idempotent (safe to call multiple times) and ensures
+ * that we either create a new app or get the existing one.
  */
 function initializeFirebaseAdmin() {
-  if (admin.apps.length > 0 && app) {
+  if (admin.apps.length > 0) {
+    app = admin.app();
     return;
   }
 
