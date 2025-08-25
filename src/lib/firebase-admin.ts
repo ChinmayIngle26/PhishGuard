@@ -5,10 +5,10 @@ let app: admin.app.App;
 
 /**
  * Initializes the Firebase Admin SDK if it hasn't been already.
- * This function is idempotent (safe to call multiple times) and should
- * be called once at server startup.
+ * This function is idempotent (safe to call multiple times) and is called
+ * automatically when the module is first loaded.
  */
-export function initializeFirebaseAdmin() {
+function initializeFirebaseAdmin() {
   if (admin.apps.length > 0 && app) {
     return;
   }
@@ -41,6 +41,9 @@ export function initializeFirebaseAdmin() {
     );
   }
 }
+
+// Call the initialization function when the module is first loaded.
+initializeFirebaseAdmin();
 
 // Export the initialized services as getters.
 // This ensures that we are always getting the service from the initialized app.
