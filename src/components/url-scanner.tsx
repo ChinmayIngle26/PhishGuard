@@ -23,7 +23,7 @@ const initialFeedbackState = {
     error: undefined,
 }
 
-function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }: { feedbackType: 'good' | 'bad', isPending: boolean, hasBeenSelected: boolean, formAction: (payload: FormData) => void }) {
+function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction, formRef }: { feedbackType: 'good' | 'bad', isPending: boolean, hasBeenSelected: boolean, formAction: (payload: FormData) => void, formRef: React.RefObject<HTMLFormElement> }) {
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -39,7 +39,7 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }
     }
 
     return (
-        <form action={formAction} className="flex items-center gap-2">
+        <form ref={formRef} action={formAction} className="flex items-center gap-2">
             {user && <input type="hidden" name="userId" value={user.uid} />}
             <input type="hidden" name="feedbackType" value={feedbackType} />
             <Button 
@@ -80,9 +80,9 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
             });
             // This is a hack to know which button was clicked without a lot of state.
-            if (goodFormRef.current && goodFormRef.current.querySelector('button:disabled')) {
+            if (goodFormRef.current?.querySelector('button:disabled')) {
                 setSubmittedFeedback('good');
-            } else if (badFormRef.current && badFormRef.current.querySelector('button:disabled')) {
+            } else if (badFormRef.current?.querySelector('button:disabled')) {
                 setSubmittedFeedback('bad');
             }
         }
@@ -176,8 +176,8 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                      <div className="flex justify-center items-center gap-4">
                         <p className="text-sm text-muted-foreground">Was this result helpful?</p>
                         <div className="flex items-center gap-2">
-                             <form ref={goodFormRef} action={feedbackAction}><FeedbackButton feedbackType="good" isPending={isFeedbackPending && submittedFeedback !== 'bad'} hasBeenSelected={submittedFeedback === 'good'} formAction={feedbackAction} /></form>
-                             <form ref={badFormRef} action={feedbackAction}><FeedbackButton feedbackType="bad" isPending={isFeedbackPending && submittedFeedback !== 'good'} hasBeenSelected={submittedFeedback === 'bad'} formAction={feedbackAction} /></form>
+                            <FeedbackButton formRef={goodFormRef} feedbackType="good" isPending={isFeedbackPending && submittedFeedback !== 'bad'} hasBeenSelected={submittedFeedback === 'good'} formAction={feedbackAction} />
+                            <FeedbackButton formRef={badFormRef} feedbackType="bad" isPending={isFeedbackPending && submittedFeedback !== 'good'} hasBeenSelected={submittedFeedback === 'bad'} formAction={feedbackAction} />
                         </div>
                     </div>
                      {submittedFeedback && (
