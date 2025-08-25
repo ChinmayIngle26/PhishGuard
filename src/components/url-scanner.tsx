@@ -27,7 +27,7 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }
     const { user } = useAuth();
     const { toast } = useToast();
 
-    const handleClick = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         if (!user) {
             e.preventDefault();
             toast({
@@ -39,7 +39,7 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }
     }
 
     return (
-        <form action={formAction} onSubmit={(e) => { handleClick(e); }} className="flex items-center gap-2">
+        <form action={formAction} className="flex items-center gap-2">
             {user && <input type="hidden" name="userId" value={user.uid} />}
             <input type="hidden" name="feedbackType" value={feedbackType} />
             <Button 
@@ -47,6 +47,7 @@ function FeedbackButton({ feedbackType, isPending, hasBeenSelected, formAction }
                 variant="outline" 
                 size="sm" 
                 disabled={isPending}
+                onClick={handleClick}
                 className={cn({'bg-accent text-accent-foreground': hasBeenSelected})}
             >
                 {isPending && hasBeenSelected ? (
@@ -69,8 +70,9 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
     const { toast } = useToast();
     const [feedbackState, feedbackAction, isFeedbackPending] = useActionState(submitFeedbackAction, initialFeedbackState);
     const [submittedFeedback, setSubmittedFeedback] = useState<'good' | 'bad' | null>(null);
-    const formRef = useRef<HTMLFormElement>(null);
-    
+    const goodFormRef = useRef<HTMLFormElement>(null);
+    const badFormRef = useRef<HTMLFormElement>(null);
+
     useEffect(() => {
         if (feedbackState.success) {
             toast({
@@ -78,10 +80,10 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 description: "Thank you for helping improve PhishGuard! Your reputation has been updated.",
             });
             // This is a hack to know which button was clicked without a lot of state.
-            if (formRef.current) {
-                const formData = new FormData(formRef.current);
-                const feedback = formData.get('feedbackType') as 'good' | 'bad';
-                setSubmittedFeedback(feedback);
+            if (goodFormRef.current && goodFormRef.current.querySelector('button:disabled')) {
+                setSubmittedFeedback('good');
+            } else if (badFormRef.current && badFormRef.current.querySelector('button:disabled')) {
+                setSubmittedFeedback('bad');
             }
         }
         if (feedbackState.error) {
@@ -173,9 +175,9 @@ function ResultCard({ result }: { result: ScanResultWithUrl }) {
                 <div className="pt-4 border-t">
                      <div className="flex justify-center items-center gap-4">
                         <p className="text-sm text-muted-foreground">Was this result helpful?</p>
-                        <div ref={formRef} className="flex items-center gap-2">
-                             <FeedbackButton feedbackType="good" isPending={isFeedbackPending} hasBeenSelected={submittedFeedback === 'good'} formAction={feedbackAction} />
-                             <FeedbackButton feedbackType="bad" isPending={isFeedbackPending} hasBeenSelected={submittedFeedback === 'bad'} formAction={feedbackAction} />
+                        <div className="flex items-center gap-2">
+                             <form ref={goodFormRef} action={feedbackAction}><FeedbackButton feedbackType="good" isPending={isFeedbackPending && submittedFeedback !== 'bad'} hasBeenSelected={submittedFeedback === 'good'} formAction={feedbackAction} /></form>
+                             <form ref={badFormRef} action={feedbackAction}><FeedbackButton feedbackType="bad" isPending={isFeedbackPending && submittedFeedback !== 'good'} hasBeenSelected={submittedFeedback === 'bad'} formAction={feedbackAction} /></form>
                         </div>
                     </div>
                      {submittedFeedback && (
